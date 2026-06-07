@@ -832,7 +832,7 @@ push_to_github() {
     api_url=<span class="string">"$GH_API/$file"</span>
     sha_response=$(gh_curl <span class="string">"$api_url"</span>)
     sha=$(echo <span class="string">"$sha_response"</span> | grep <span class="string">'"sha"'</span> | head -1 | sed <span class="string">'s/.*"sha": *"\([^"]*\)".*/\1/'</span>)
-    content=$(base64 -w0 < <span class="string">"$file"</span> 2>/dev/null || base64 < <span class="string">"$file"</span>)
+    content=$(base64 -w0 < <span class="string">"$file"</span> 2>/dev/null || base64 < <span class="string">"$file"</span> | tr -d <span class="string">'\n'</span>)
     msg="Note update: $file on $(date '+%Y-%m-%d %H:%M:%S')"
     <span class="keyword">local</span> sha_field=<span class="string">""</span>
     [ -n <span class="string">"$sha"</span> ] && sha_field=<span class="string">",\"sha\":\"$sha\""</span>
@@ -1436,8 +1436,9 @@ push_to_github() {
     local file="\$1"
     local sha content msg api_url sha_response push_response http_code
     api_url="\$GH_API/\$file"
+    sha_response=\$(gh_curl "\$api_url")
     sha=\$(echo "\$sha_response" | grep '"sha"' | head -1 | sed 's/.*"sha": *"\\([^"]*\\)".*/\\1/')
-    content=\$(base64 -w0 < "\$file" 2>/dev/null || base64 < "\$file")
+    content=\$(base64 -w0 < "\$file" 2>/dev/null || base64 < "\$file" | tr -d '\\n')
     msg="Note update: \$file on \$(date '+%Y-%m-%d %H:%M:%S')"
     local sha_field=""
     [ -n "\$sha" ] && sha_field=",\\"sha\\":\\"\$sha\\""
