@@ -93,19 +93,6 @@
                 color: var(--terminal-green);
             }
 
-            /* ── Description Intro Block ── */
-            .intro-block {
-                text-align: left;
-                margin: 1rem 0 2rem 0;
-                max-width: 100%;
-            }
-            .intro-block p {
-                font-size: 1.05rem;
-                color: var(--text-main);
-                margin-bottom: 1.25rem;
-                line-height: 1.7;
-            }
-
             /* ── Terminal demo ── */
             .terminal-window {
                 width: 100%;
@@ -146,16 +133,13 @@
                 color: var(--text-muted);
                 margin-left: auto;
                 margin-right: auto;
-                padding-right: 24px;
+                padding-right: 24px; /* offset for symmetry */
             }
             .terminal-body {
                 padding: 1rem 1.25rem 1.25rem;
                 font-family: "IBM Plex Mono", monospace;
                 font-size: 0.85rem;
                 line-height: 1.75;
-                min-height: 440px;
-                position: relative;
-                color: #e6edf3;
             }
             .t-prompt {
                 color: var(--terminal-green);
@@ -173,63 +157,29 @@
                 color: var(--terminal-green);
             }
 
-            .cursor {
-                display: inline-block;
-                width: 8px;
-                height: 15px;
-                background-color: var(--terminal-green);
-                vertical-align: middle;
-                margin-left: 2px;
-                animation: blink 1s step-end infinite;
+            /* ── About text inside terminal ── */
+            .t-divider {
+                border: none;
+                border-top: 1px dashed var(--border-color);
+                margin: 0.75rem 0;
             }
-            .cursor.white {
-                background-color: #ffffff;
+            .t-about {
+                color: var(--text-muted);
+                font-size: 0.82rem;
             }
-
-            /* Terminal View Screen Sections */
-            .terminal-screen {
-                display: none;
+            .t-about p {
+                color: var(--text-muted);
+                margin-bottom: 0.6rem;
             }
-            .terminal-screen.active {
-                display: block;
+            .t-about p:last-child {
+                margin-bottom: 0;
             }
-
-            /* Nano Editor Styling Structure */
-            .nano-buffer {
-                background: #000000;
-                color: #ffffff;
-                margin: -1rem -1.25rem -1.25rem;
-                padding: 0.5rem 1rem 1rem;
-                min-height: 440px;
-                display: flex;
-                flex-direction: column;
-                justify-content: space-between;
-            }
-            .nano-header {
-                background: #ffffff;
-                color: #000000;
-                text-align: center;
-                font-size: 0.8rem;
-                font-weight: bold;
-                padding: 0 0.5rem;
-            }
-            .nano-content {
-                flex-grow: 1;
-                padding: 1rem 0;
-                color: #ffffff;
-                font-weight: normal;
-            }
-            .nano-footer {
-                display: grid;
-                grid-template-columns: repeat(4, 1fr);
-                gap: 0.25rem;
-                font-size: 0.75rem;
-                color: #ffffff;
-            }
-            .nano-key {
-                color: #00ff00;
-                font-weight: bold;
-                margin-right: 0.25rem;
+            .t-about code {
+                color: var(--accent-color);
+                background: transparent;
+                padding: 0;
+                font-size: inherit;
+                font-family: inherit;
             }
 
             h1 {
@@ -481,144 +431,38 @@
                         <span>get_notes.md</span>
                     </div>
 
-                    <div class="intro-block">
-                        <p>
-                            <code>gn</code> (Get Notes) is a zero-dependency CLI
-                            note utility that saves your markdown files directly
-                            to a private GitHub repository. It acts as a
-                            lightweight sync layer using nothing but native Bash
-                            and curl - no local Git installation or setup
-                            required.
-                        </p>
-                        <p>
-                            When you run <code>gn note-name</code>, it instantly
-                            pulls the latest file version from GitHub, opens it
-                            in your default <code>$EDITOR</code>, and
-                            automatically pushes your changes via the GitHub API
-                            as soon as you save and exit.
-                        </p>
-                        <p>
-                            It runs completely in the foreground with zero
-                            background daemons, no local databases, and no
-                            tracking. It is built to give you seamless cloud
-                            backups while keeping your notes as raw, standalone
-                            text files under your own control.
-                        </p>
-                    </div>
-
                     <div class="terminal-window">
                         <div class="terminal-titlebar">
                             <div class="terminal-dot red"></div>
                             <div class="terminal-dot yellow"></div>
                             <div class="terminal-dot green"></div>
                             <span class="terminal-titlebar-label"
-                                >bash - 80&times;24</span
+                                >bash &mdash; 80&times;24</span
                             >
                         </div>
-                        <div class="terminal-body" id="terminal-content">
-                            <div id="scr-type-1" class="terminal-screen active">
-                                <span class="t-prompt">user@terminal:~$</span>
-                                <span class="t-cmd" id="text-cmd-1"></span
-                                ><span class="cursor" id="cursor-1"></span>
-                            </div>
-
-                            <div id="scr-nano" class="terminal-screen">
-                                <div class="nano-buffer">
-                                    <div class="nano-header">
-                                        GNU nano 7.2 - hello.md
-                                    </div>
-                                    <div class="nano-content">
-                                        <span id="text-nano-body"></span
-                                        ><span
-                                            class="cursor white"
-                                            id="cursor-nano"
-                                        ></span>
-                                    </div>
-                                    <div class="nano-footer">
-                                        <div>
-                                            <span class="nano-key">^G</span> Get
-                                            Help
-                                        </div>
-                                        <div>
-                                            <span class="nano-key">^O</span>
-                                            Write Out
-                                        </div>
-                                        <div>
-                                            <span class="nano-key">^W</span>
-                                            Where Is
-                                        </div>
-                                        <div>
-                                            <span class="nano-key">^X</span>
-                                            Exit
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div id="scr-sync" class="terminal-screen">
-                                <span class="t-prompt">user@terminal:~$</span>
-                                <span class="t-cmd">gn hello</span><br />
-                                <div id="sync-logs"></div>
-                            </div>
-
-                            <div id="scr-help" class="terminal-screen">
-                                <span class="t-prompt">user@terminal:~$</span>
-                                <span class="t-cmd">gn hello</span><br />
-                                <span class="t-out"
-                                    >Fetching latest cloud updates...</span
-                                ><br />
-                                <span class="t-out"
-                                    >Syncing changes to GitHub...</span
-                                ><br />
-                                <span class="t-ok">Sync complete!</span><br />
-                                <span
-                                    class="t-prompt"
-                                    style="
-                                        display: inline-block;
-                                        margin-top: 0.75rem;
-                                    "
-                                    >user@terminal:~$</span
-                                >
-                                <span class="t-cmd" id="text-cmd-2"></span
-                                ><span class="cursor" id="cursor-2"></span>
-                                <div
-                                    id="help-output"
-                                    style="
-                                        display: none;
-                                        margin-top: 0.25rem;
-                                        color: var(--text-muted);
-                                    "
-                                >
-                                    Usage: gn [options] [note_name]<br /><br />
-                                    Options:<br />
-                                    &nbsp;&nbsp;-h&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Show
-                                    this help message<br />
-                                    &nbsp;&nbsp;-l&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;List
-                                    all notes in your notes directory<br />
-                                    &nbsp;&nbsp;-g QUERY&nbsp;&nbsp;Search for
-                                    text across all notes (grep)<br />
-                                    &nbsp;&nbsp;-t&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Quickly
-                                    open today's journal note (YYYY-MM-DD.md)<br />
-                                    &nbsp;&nbsp;-d NOTE&nbsp;&nbsp;&nbsp;Delete
-                                    a note locally and from GitHub<br />
-                                    &nbsp;&nbsp;-r OLD NEW Rename a note locally
-                                    and on GitHub<br />
-                                    &nbsp;&nbsp;-p&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Pull
-                                    all notes from GitHub to local<br /><br />
-                                    Examples:<br />
-                                    &nbsp;&nbsp;gn&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Opens
-                                    index.md<br />
-                                    &nbsp;&nbsp;gn
-                                    log&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Creates
-                                    log.md<br />
-                                    &nbsp;&nbsp;gn
-                                    work/todo&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Opens
-                                    work/todo.md<br />
-                                    <span class="t-prompt"
-                                        >user@terminal:~$</span
-                                    >
-                                    <span class="cursor"></span>
-                                </div>
+                        <div class="terminal-body">
+                            <div class="t-about">
+                                <p>
+                                    <code>gn</code> (Get Notes) is a simple CLI
+                                    note-taking tool for people who prefer plain
+                                    text over platforms. It uses Markdown files,
+                                    your existing <code>$EDITOR</code>, and a
+                                    private GitHub repository to create a
+                                    simple, portable notes tool that works in
+                                    any Bash environment &mdash; even if you
+                                    don&apos;t have git installed.
+                                </p>
+                                <p>
+                                    Open a note, write, save, and quit.
+                                    <code>gn</code> handles the rest. It
+                                    automatically pulls the latest version
+                                    before you edit and pushes your changes when
+                                    you&apos;re done via the GitHub API &mdash;
+                                    no Git required, just <code>curl</code>. No
+                                    databases, no subscriptions, no vendor
+                                    lock-in &mdash; just text files and your
+                                    terminal.
+                                </p>
                             </div>
                         </div>
                     </div>
@@ -638,8 +482,8 @@
                         <span class="step-title">GitHub Account Setup</span>
                         <div class="step-content">
                             <p>
-                                You will need a GitHub account and a GitHub
-                                personal access token.
+                                You need a GitHub account and a GitHub personal
+                                access token. Git is not required.
                             </p>
                             <div class="external-links">
                                 <a
@@ -654,12 +498,10 @@
                                 >
                             </div>
                             <p style="margin-top: 0.75rem">
-                                Set Expiration to "No expiration." Under Select
-                                scope check "repo" (Full control of private
-                                repositories.) Generate the token. NOTE: Copy
-                                the token now - it is only displayed once.
-                                You'll need it in the configuration setup step
-                                below.
+                                When creating the token, grant it the
+                                <strong>repo</strong> scope (full control of
+                                private repositories). Save the token - you'll
+                                need it in the configuration setup step below.
                             </p>
                         </div>
                     </div>
@@ -682,7 +524,7 @@
                                 <a
                                     href="https://docs.github.com/en/repositories/creating-and-managing-repositories/creating-a-new-repository"
                                     target="_blank"
-                                    >🔗 Creating a Github repository</a
+                                    >🔗 Creating a remote repository</a
                                 >
                             </div>
                         </div>
@@ -693,7 +535,7 @@
             <section id="get-started">
                 <h2>Download gn</h2>
                 <p>
-                    Download the install script or manually configure
+                    Download the automated installer or manually configure
                     <code>gn</code> using the directions below.
                 </p>
 
@@ -701,8 +543,7 @@
                     <h3>Option A: Installer (Recommended)</h3>
                     <p style="font-size: 0.9rem; color: var(--text-muted)">
                         Download an <code>install.sh</code> that prompts you for
-                        your GitHub credentials during installation and fully
-                        sets up <code>gn</code> for you.
+                        your GitHub credentials during installation.
                     </p>
 
                     <div class="btn-container" style="margin-bottom: 0">
@@ -806,7 +647,7 @@ gh_curl() {
     <span class="keyword">return</span> $rc
 }
 
-<span class="comment"># --- GitHub API Sync Functions ---</span>
+<span class="comment"># --- GitHub API Sync Functions (used when git is not available) ---</span>
 pull_from_github() {
     <span class="keyword">local</span> file=<span class="string">"$1"</span>
     <span class="keyword">local</span> response content http_code
@@ -820,7 +661,7 @@ pull_from_github() {
         <span class="keyword">echo</span> <span class="string">"Error: pull failed (HTTP $http_code). Check your token and repo name."</span> >&2
         <span class="keyword">exit</span> 1
     <span class="keyword">fi</span>
-    content=$(echo <span class="string">"$response"</span> | grep <span class="string">''"content"'</span> | sed <span class="string">'s/.*"content": *"\(.*\)".*/\1/'</span> | tr -d <span class="string">'\\n'</span>)
+    content=$(echo <span class="string">"$response"</span> | grep <span class="string">'"content"'</span> | sed <span class="string">'s/.*"content": *"\(.*\)".*/\1/'</span> | tr -d <span class="string">'\\n'</span>)
     <span class="keyword">if</span> [ -n <span class="string">"$content"</span> ]; <span class="keyword">then</span>
         <span class="keyword">echo</span> <span class="string">"$content"</span> | base64 -d > <span class="string">"$file"</span> 2>/dev/null || <span class="keyword">echo</span> <span class="string">"$content"</span> | base64 -D > <span class="string">"$file"</span>
     <span class="keyword">fi</span>
@@ -832,7 +673,7 @@ push_to_github() {
     api_url=<span class="string">"$GH_API/$file"</span>
     sha_response=$(gh_curl <span class="string">"$api_url"</span>)
     sha=$(echo <span class="string">"$sha_response"</span> | grep <span class="string">'"sha"'</span> | head -1 | sed <span class="string">'s/.*"sha": *"\([^"]*\)".*/\1/'</span>)
-    content=$(base64 -w0 < <span class="string">"$file"</span> 2>/dev/null || base64 < <span class="string">"$file"</span> | tr -d <span class="string">'\n'</span>)
+    content=$(base64 -w0 < <span class="string">"$file"</span> 2>/dev/null || base64 < <span class="string">"$file"</span>)
     msg="Note update: $file on $(date '+%Y-%m-%d %H:%M:%S')"
     <span class="keyword">local</span> sha_field=<span class="string">""</span>
     [ -n <span class="string">"$sha"</span> ] && sha_field=<span class="string">",\"sha\":\"$sha\""</span>
@@ -856,7 +697,6 @@ show_help() {
     <span class="keyword">echo</span> <span class="string">"  -t        Quickly open today's journal note (YYYY-MM-DD.md)"</span>
     <span class="keyword">echo</span> <span class="string">"  -d NOTE   Delete a note locally and from GitHub"</span>
     <span class="keyword">echo</span> <span class="string">"  -r OLD NEW  Rename a note locally and on GitHub"</span>
-    <span class="keyword">echo</span> <span class="string">"  -p        Pull all notes from GitHub to local"</span>
     <span class="keyword">echo</span> <span class="string">""</span>
     <span class="keyword">echo</span> <span class="string">"Examples:"</span>
     <span class="keyword">echo</span> <span class="string">"  gn                  Opens index.md"</span>
@@ -865,7 +705,6 @@ show_help() {
     <span class="keyword">echo</span> <span class="string">"  gn work/todo        Opens work/todo.md"</span>
     <span class="keyword">echo</span> <span class="string">"  gn -g 'api key'     Searches all notes for the term 'api key'"</span>
     <span class="keyword">echo</span> <span class="string">"  gn -t               Creates a note named today's date"</span>
-    <span class="keyword">echo</span> <span class="string">"  gn -p               Pulls all notes from GitHub to local"</span>
     <span class="keyword">exit</span> 0
 }
 
@@ -948,35 +787,8 @@ rename_note() {
     <span class="keyword">exit</span> 0
 }
 
-<span class="comment"># --- Pull All Notes From GitHub ---</span>
-pull_all_from_github() {
-    <span class="keyword">local</span> response http_code files file
-    <span class="keyword">echo</span> <span class="string">"Fetching file list from GitHub..."</span>
-    response=$(gh_curl -w <span class="string">"\n%{http_code}"</span> <span class="string">"$GH_API"</span>)
-    http_code=$(echo <span class="string">"$response"</span> | tail -1)
-    response=$(echo <span class="string">"$response"</span> | head -n -1)
-    <span class="keyword">if</span> [ <span class="string">"$http_code"</span> != <span class="string">"200"</span> ]; <span class="keyword">then</span>
-        <span class="keyword">echo</span> <span class="string">"Error: could not list remote files (HTTP $http_code). Check your token and repo name."</span> >&2
-        <span class="keyword">exit</span> 1
-    <span class="keyword">fi</span>
-    files=$(echo <span class="string">"$response"</span> | grep <span class="string">'"name"'</span> | sed <span class="string">'s/.*"name": *"\([^"]*\)".*/\1/'</span>)
-    <span class="keyword">if</span> [ -z <span class="string">"$files"</span> ]; <span class="keyword">then</span>
-        <span class="keyword">echo</span> <span class="string">"No notes found in remote repo."</span>
-        <span class="keyword">exit</span> 0
-    <span class="keyword">fi</span>
-    <span class="keyword">local</span> count=0
-    <span class="keyword">while</span> IFS= read -r file; <span class="keyword">do</span>
-        [[ <span class="string">"$file"</span> == *.md ]] || <span class="keyword">continue</span>
-        <span class="keyword">echo</span> <span class="string">"  pulling $file..."</span>
-        pull_from_github <span class="string">"$file"</span>
-        count=$((count + 1))
-    <span class="keyword">done</span> <<< <span class="string">"$files"</span>
-    <span class="keyword">echo</span> <span class="string">"Done. $count note(s) synced locally."</span>
-    <span class="keyword">exit</span> 0
-}
-
 <span class="comment"># --- Parse Flags ---</span>
-<span class="keyword">while</span> <span class="keyword">getopts</span> <span class="string">"hlg:td:r:p"</span> opt; <span class="keyword">do</span>
+<span class="keyword">while</span> <span class="keyword">getopts</span> <span class="string">"hlg:td:r:"</span> opt; <span class="keyword">do</span>
     <span class="keyword">case</span> <span class="variable">${opt}</span> <span class="keyword">in</span>
         h ) show_help ;;
         l ) list_notes ;;
@@ -984,7 +796,6 @@ pull_all_from_github() {
         t ) NOTE_NAME=$(date <span class="string">'+%Y-%m-%d'</span>) ;;
         d ) delete_note <span class="string">"$OPTARG"</span> ;;
         r ) rename_note <span class="string">"$OPTARG"</span> <span class="string">"${@:$OPTIND:1}"</span> ;;
-        p ) pull_all_from_github ;;
         \? ) show_help ;;
     esac
 <span class="keyword">done</span>
@@ -1036,9 +847,9 @@ push_to_github <span class="string">"$NOTE_NAME"</span>
                         <span class="step-title">Create the Config File</span>
                         <div class="step-content">
                             <p>
-                                The config file lives inside your gn directory
-                                as a .conf file. Create the directory first,
-                                then the config:
+                                The config file lives inside your notes
+                                directory as a .conf file. Create the directory
+                                first, then the config:
                             </p>
                             <pre><code>mkdir -p ~/gn
 nano ~/gn/gn.conf
@@ -1110,8 +921,7 @@ gn -l               # Lists all your notes
 gn -g "todo"        # Finds text matching "todo" inside any note
 gn -t               # Opens today's automated scratchpad entry
 gn -d daily-log     # Deletes daily-log.md locally and from GitHub
-gn -r old new       # Renames old.md to new.md locally and on GitHub
-gn -p               # Pulls all notes from GitHub (first-time setup)</code></pre>
+gn -r old new       # Renames old.md to new.md locally and on GitHub</code></pre>
                         </div>
                     </div>
                 </div>
@@ -1133,7 +943,9 @@ gn -p               # Pulls all notes from GitHub (first-time setup)</code></pre
                         >
                         <div class="step-content">
                             <pre><code>mkdir -p ~/gn
-nano ~/gn/gn.conf</code></pre>
+nano ~/gn/gn.conf
+chmod 600 ~/gn/gn.conf
+</code></pre>
                             <pre><code>GH_TOKEN=ghp_yourpersonalaccesstoken
 GH_OWNER=GITHUB-USERNAME
 GH_REPO=gn</code></pre>
@@ -1151,9 +963,9 @@ GH_REPO=gn</code></pre>
                             <pre><code>chmod +x gn.sh
 sudo cp gn.sh /usr/local/bin/gn</code></pre>
                             <p>
-                                That's it. Run <code>gn -p</code> to pull all
-                                your existing notes down at once, then use
-                                <code>gn</code> normally from there.
+                                That's it - run <code>gn</code> and it will pull
+                                your notes before opening the editor, just like
+                                on your first machine.
                             </p>
                         </div>
                     </div>
@@ -1245,137 +1057,6 @@ sudo cp gn.sh /usr/local/bin/gn</code></pre>
         </div>
 
         <script>
-            document.addEventListener("DOMContentLoaded", () => {
-                const cmd1 = "gn hello";
-                const nanoText = "hello world";
-                const cmd2 = "gn -h";
-
-                const container1 = document.getElementById("text-cmd-1");
-                const containerNano = document.getElementById("text-nano-body");
-                const container2 = document.getElementById("text-cmd-2");
-
-                const s1 = document.getElementById("scr-type-1");
-                const sNano = document.getElementById("scr-nano");
-                const sSync = document.getElementById("scr-sync");
-                const sHelp = document.getElementById("scr-help");
-                const logs = document.getElementById("sync-logs");
-                const helpOutput = document.getElementById("help-output");
-
-                function typeString(
-                    targetElement,
-                    fullString,
-                    speed,
-                    callback,
-                ) {
-                    let index = 0;
-                    targetElement.textContent = "";
-                    const interval = setInterval(() => {
-                        if (index < fullString.length) {
-                            targetElement.textContent += fullString[index];
-                            index++;
-                        } else {
-                            clearInterval(interval);
-                            setTimeout(callback, 600);
-                        }
-                    }, speed);
-                }
-
-                function appendLog(text, className, delay, callback) {
-                    setTimeout(() => {
-                        const line = document.createElement("span");
-                        line.className = className;
-                        line.innerHTML = text + "<br />";
-                        logs.appendChild(line);
-                        if (callback) callback();
-                    }, delay);
-                }
-
-                // Sequence workflow chain runner execution loop
-                function runTerminalSequence() {
-                    // Reset fields
-                    container1.textContent = "";
-                    containerNano.textContent = "";
-                    container2.textContent = "";
-                    logs.innerHTML = "";
-                    helpOutput.style.display = "none";
-                    document.getElementById("cursor-2").style.display =
-                        "inline-block";
-
-                    s1.classList.add("active");
-                    sNano.classList.remove("active");
-                    sSync.classList.remove("active");
-                    sHelp.classList.remove("active");
-
-                    // 1. Type 'gn hello'
-                    setTimeout(() => {
-                        typeString(container1, cmd1, 100, () => {
-                            // 2. Hide prompt line, switch view layer framework and open up Nano editor view
-                            s1.classList.remove("active");
-                            sNano.classList.add("active");
-
-                            // 3. Type text content directly into buffer string
-                            setTimeout(() => {
-                                typeString(containerNano, nanoText, 120, () => {
-                                    // 4. Simulate saving buffer text and exiting editor
-                                    setTimeout(() => {
-                                        sNano.classList.remove("active");
-                                        sSync.classList.add("active");
-
-                                        // 5. Append lines indicating server handshakes/pushed commits via API endpoints
-                                        appendLog(
-                                            "Fetching latest cloud updates...",
-                                            "t-out",
-                                            300,
-                                        );
-                                        appendLog(
-                                            "Syncing changes to GitHub...",
-                                            "t-out",
-                                            1100,
-                                        );
-                                        appendLog(
-                                            "Sync complete!",
-                                            "t-ok",
-                                            1900,
-                                            () => {
-                                                // 6. Transition view to setup help profile
-                                                setTimeout(() => {
-                                                    sSync.classList.remove(
-                                                        "active",
-                                                    );
-                                                    sHelp.classList.add(
-                                                        "active",
-                                                    );
-
-                                                    // 7. Type flag line text parameters
-                                                    typeString(
-                                                        container2,
-                                                        cmd2,
-                                                        100,
-                                                        () => {
-                                                            // 8. Yield terminal stdout dump info configuration block directly layout
-                                                            document.getElementById(
-                                                                "cursor-2",
-                                                            ).style.display =
-                                                                "none";
-                                                            helpOutput.style.display =
-                                                                "block";
-                                                        },
-                                                    );
-                                                }, 1000);
-                                            },
-                                        );
-                                    }, 1000);
-                                });
-                            }, 500);
-                        });
-                    }, 800);
-                }
-
-                runTerminalSequence();
-            });
-        </script>
-
-        <script>
             const getScriptRawBody = () => {
                 return `#!/usr/bin/env bash
 
@@ -1412,7 +1093,7 @@ gh_curl() {
     return \$rc
 }
 
-# --- GitHub API Sync Functions ---
+# --- GitHub API Sync Functions (used when git is not available) ---
 pull_from_github() {
     local file="\$1"
     local response content http_code
@@ -1426,7 +1107,7 @@ pull_from_github() {
         echo "Error: pull failed (HTTP \$http_code). Check your token and repo name." >&2
         exit 1
     fi
-    content=\$(echo "\$response" | grep '"content"' | sed 's/.*"content": *"\\(.*\\)".*/\\1/' | tr -d '\\n')
+    content=\$(echo "\$response" | grep '"content"' | sed 's/.*"content": *"\\(.*\\)".*/\\1/' | tr -d '\\\\n')
     if [ -n "\$content" ]; then
         echo "\$content" | base64 -d > "\$file" 2>/dev/null || echo "\$content" | base64 -D > "\$file"
     fi
@@ -1438,7 +1119,7 @@ push_to_github() {
     api_url="\$GH_API/\$file"
     sha_response=\$(gh_curl "\$api_url")
     sha=\$(echo "\$sha_response" | grep '"sha"' | head -1 | sed 's/.*"sha": *"\\([^"]*\\)".*/\\1/')
-    content=\$(base64 -w0 < "\$file" 2>/dev/null || base64 < "\$file" | tr -d '\\n')
+    content=\$(base64 -w0 < "\$file" 2>/dev/null || base64 < "\$file")
     msg="Note update: \$file on \$(date '+%Y-%m-%d %H:%M:%S')"
     local sha_field=""
     [ -n "\$sha" ] && sha_field=",\\"sha\\":\\"\$sha\\""
@@ -1462,7 +1143,6 @@ show_help() {
     echo "  -t        Quickly open today's journal note (YYYY-MM-DD.md)"
     echo "  -d NOTE   Delete a note locally and from GitHub"
     echo "  -r OLD NEW  Rename a note locally and on GitHub"
-    echo "  -p        Pull all notes from GitHub to local"
     echo ""
     echo "Examples:"
     echo "  gn                  Opens index.md"
@@ -1471,7 +1151,6 @@ show_help() {
     echo "  gn work/todo        Opens work/todo.md"
     echo "  gn -g 'api key'     Searches notes for the term 'api key'"
     echo "  gn -t               Creates a note named today's date"
-    echo "  gn -p               Pulls all notes from GitHub to local"
     exit 0
 }
 
@@ -1501,7 +1180,7 @@ delete_note() {
         echo "Error: '\$file' not found locally."
         exit 1
     fi
-    read -r -p "Delete '$file'? This cannot be undone. [y/N] " confirm
+    read -r -p "Delete '\$file'? This cannot be undone. [y/N] " confirm
     [[ "\$confirm" =~ ^[Yy]\$ ]] || { echo "Aborted."; exit 0; }
     local sha api_url
     api_url="\$GH_API/\$file"
@@ -1548,39 +1227,12 @@ rename_note() {
             -d "{\\"message\\":\\"Rename \$old_name to \$new_name\\",\\"sha\\":\\"\$sha\\"}" > /dev/null
     fi
     mv "\$NOTES_DIR/\$old_name" "\$NOTES_DIR/\$new_name"
-    echo "Renamed '\$old_name' to '$new_name'."
-    exit 0
-}
-
-# --- Pull All Notes From GitHub ---
-pull_all_from_github() {
-    local response http_code files file
-    echo "Fetching file list from GitHub..."
-    response=\$(gh_curl -w "\\n%{http_code}" "\$GH_API")
-    http_code=\$(echo "\$response" | tail -1)
-    response=\$(echo "\$response" | head -n -1)
-    if [ "\$http_code" != "200" ]; then
-        echo "Error: could not list remote files (HTTP \$http_code). Check your token and repo name." >&2
-        exit 1
-    fi
-    files=\$(echo "\$response" | grep '"name"' | sed 's/.*"name": *"\\([^"]*\\)".*/\\1/')
-    if [ -z "\$files" ]; then
-        echo "No notes found in remote repo."
-        exit 0
-    fi
-    local count=0
-    while IFS= read -r file; do
-        [[ "\$file" == *.md ]] || continue
-        echo "  pulling \$file..."
-        pull_from_github "\$file"
-        count=\$((count + 1))
-    done <<< "\$files"
-    echo "Done. \$count note(s) synced locally."
+    echo "Renamed '\$old_name' to '\$new_name'."
     exit 0
 }
 
 # --- Parse Flags ---
-while getopts "hlg:td:r:p" opt; do
+while getopts "hlg:td:r:" opt; do
     case \${opt} in
         h ) show_help ;;
         l ) list_notes ;;
@@ -1588,7 +1240,6 @@ while getopts "hlg:td:r:p" opt; do
         t ) NOTE_NAME=\$(date '+%Y-%m-%d') ;;
         d ) delete_note "\$OPTARG" ;;
         r ) rename_note "\$OPTARG" "\${@:\$OPTIND:1}" ;;
-        p ) pull_all_from_github ;;
         \\? ) show_help ;;
     esac
 done
@@ -1683,18 +1334,18 @@ EOF
 chmod 600 "\$NOTES_DIR/gn.conf"
 echo "   Saved configuration inside: \$NOTES_DIR/gn.conf"
 
-echo "-> Building native execution script loop..."
+echo "-> Setting up gn..."
 cat << 'EOF' > "\$NOTES_DIR/gn.sh"
 ${rawScript}
 EOF
 chmod +x "\$NOTES_DIR/gn.sh"
 
-echo "-> Registering binary framework within global environment path scope..."
+echo "-> Making gn globally runnable..."
 if [ -d "\$INSTALL_DIR" ] && [ -w "\$INSTALL_DIR" ]; then
     cp "\$NOTES_DIR/gn.sh" "\$INSTALL_DIR/gn"
     echo "   Installed successfully to \$INSTALL_DIR/gn"
 else
-    echo "   Requires elevated authorization permissions to write to global binary stack..."
+    echo "   Requires elevated permissions..."
     sudo cp "\$NOTES_DIR/gn.sh" "\$INSTALL_DIR/gn"
 fi
 

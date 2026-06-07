@@ -33,7 +33,7 @@ gh_curl() {
     return $rc
 }
 
-# --- GitHub API Sync Functions ---
+# --- GitHub API Sync Functions (used when git is not available) ---
 pull_from_github() {
     local file="$1"
     local response content http_code
@@ -47,7 +47,7 @@ pull_from_github() {
         echo "Error: pull failed (HTTP $http_code). Check your token and repo name." >&2
         exit 1
     fi
-    content=$(echo "$response" | grep '"content"' | sed 's/.*"content": *"\(.*\)".*/\1/' | tr -d '\n')
+    content=$(echo "$response" | grep '"content"' | sed 's/.*"content": *"\(.*\)".*/\1/' | tr -d '\\n')
     if [ -n "$content" ]; then
         echo "$content" | base64 -d > "$file" 2>/dev/null || echo "$content" | base64 -D > "$file"
     fi
@@ -59,7 +59,7 @@ push_to_github() {
     api_url="$GH_API/$file"
     sha_response=$(gh_curl "$api_url")
     sha=$(echo "$sha_response" | grep '"sha"' | head -1 | sed 's/.*"sha": *"\([^"]*\)".*/\1/')
-    content=$(base64 -w0 < "$file" 2>/dev/null || base64 < "$file" | tr -d '\n')
+    content=$(base64 -w0 < "$file" 2>/dev/null || base64 < "$file")
     msg="Note update: $file on $(date '+%Y-%m-%d %H:%M:%S')"
     local sha_field=""
     [ -n "$sha" ] && sha_field=",\"sha\":\"$sha\""
@@ -83,7 +83,6 @@ show_help() {
     echo "  -t        Quickly open today's journal note (YYYY-MM-DD.md)"
     echo "  -d NOTE   Delete a note locally and from GitHub"
     echo "  -r OLD NEW  Rename a note locally and on GitHub"
-    echo "  -p        Pull all notes from GitHub to local"
     echo ""
     echo "Examples:"
     echo "  gn                  Opens index.md"
@@ -92,7 +91,6 @@ show_help() {
     echo "  gn work/todo        Opens work/todo.md"
     echo "  gn -g 'api key'     Searches notes for the term 'api key'"
     echo "  gn -t               Creates a note named today's date"
-    echo "  gn -p               Pulls all notes from GitHub to local"
     exit 0
 }
 
@@ -173,35 +171,8 @@ rename_note() {
     exit 0
 }
 
-# --- Pull All Notes From GitHub ---
-pull_all_from_github() {
-    local response http_code files file
-    echo "Fetching file list from GitHub..."
-    response=$(gh_curl -w "\n%{http_code}" "$GH_API")
-    http_code=$(echo "$response" | tail -1)
-    response=$(echo "$response" | head -n -1)
-    if [ "$http_code" != "200" ]; then
-        echo "Error: could not list remote files (HTTP $http_code). Check your token and repo name." >&2
-        exit 1
-    fi
-    files=$(echo "$response" | grep '"name"' | sed 's/.*"name": *"\([^"]*\)".*/\1/')
-    if [ -z "$files" ]; then
-        echo "No notes found in remote repo."
-        exit 0
-    fi
-    local count=0
-    while IFS= read -r file; do
-        [[ "$file" == *.md ]] || continue
-        echo "  pulling $file..."
-        pull_from_github "$file"
-        count=$((count + 1))
-    done <<< "$files"
-    echo "Done. $count note(s) synced locally."
-    exit 0
-}
-
 # --- Parse Flags ---
-while getopts "hlg:td:r:p" opt; do
+while getopts "hlg:td:r:" opt; do
     case ${opt} in
         h ) show_help ;;
         l ) list_notes ;;
@@ -209,7 +180,6 @@ while getopts "hlg:td:r:p" opt; do
         t ) NOTE_NAME=$(date '+%Y-%m-%d') ;;
         d ) delete_note "$OPTARG" ;;
         r ) rename_note "$OPTARG" "${@:$OPTIND:1}" ;;
-        p ) pull_all_from_github ;;
         \? ) show_help ;;
     esac
 done
