@@ -54,6 +54,8 @@ show_help() {
     echo "  -l        List all notes in your notes directory"
     echo "  -g QUERY  Search for text across all notes (grep)"
     echo "  -t        Quickly open today's journal note (YYYY-MM-DD.md)"
+    echo "  -d NOTE   Delete a note locally and from GitHub"
+    echo "  -r OLD NEW  Rename a note locally and on GitHub"
     echo ""
     echo "Examples:"
     echo "  gn                  Opens index.md"
@@ -80,13 +82,76 @@ search_notes() {
     exit 0
 }
 
+# --- Delete Note Function ---
+delete_note() {
+    local file="$1"
+    if [[ "$file" != *.md ]]; then
+        file="${file}.md"
+    fi
+    if [ ! -f "$NOTES_DIR/$file" ]; then
+        echo "Error: '$file' not found locally."
+        exit 1
+    fi
+    read -r -p "Delete '$file'? This cannot be undone. [y/N] " confirm
+    [[ "$confirm" =~ ^[Yy]$ ]] || { echo "Aborted."; exit 0; }
+    local sha api_url
+    api_url="$GH_API/$file"
+    sha=$(curl -s -H "Authorization: token $GH_TOKEN" "$api_url" | grep '"sha"' | head -1 | sed 's/.*"sha": *"\([^"]*\)".*/\1/')
+    if [ -n "$sha" ]; then
+        curl -s -X DELETE -H "Authorization: token $GH_TOKEN" "$api_url" \
+            -d "{\"message\":\"Delete $file\",\"sha\":\"$sha\"}" > /dev/null
+        echo "Deleted from GitHub."
+    else
+        echo "Warning: File not found on GitHub. Removing locally only."
+    fi
+    rm "$NOTES_DIR/$file"
+    echo "Deleted '$file'."
+    exit 0
+}
+
+# --- Rename Note Function ---
+rename_note() {
+    local old_name="$1"
+    local new_name="$2"
+    if [[ "$old_name" != *.md ]]; then
+        old_name="${old_name}.md"
+    fi
+    if [[ "$new_name" != *.md ]]; then
+        new_name="${new_name}.md"
+    fi
+    if [ ! -f "$NOTES_DIR/$old_name" ]; then
+        echo "Error: '$old_name' not found locally."
+        exit 1
+    fi
+    if [ -f "$NOTES_DIR/$new_name" ]; then
+        echo "Error: '$new_name' already exists."
+        exit 1
+    fi
+    local sha old_api_url new_api_url content
+    old_api_url="$GH_API/$old_name"
+    new_api_url="$GH_API/$new_name"
+    sha=$(curl -s -H "Authorization: token $GH_TOKEN" "$old_api_url" | grep '"sha"' | head -1 | sed 's/.*"sha": *"\([^"]*\)".*/\1/')
+    content=$(base64 -w0 < "$NOTES_DIR/$old_name" 2>/dev/null || base64 < "$NOTES_DIR/$old_name")
+    curl -s -X PUT -H "Authorization: token $GH_TOKEN" "$new_api_url" \
+        -d "{\"message\":\"Rename $old_name to $new_name\",\"content\":\"$content\"}" > /dev/null
+    if [ -n "$sha" ]; then
+        curl -s -X DELETE -H "Authorization: token $GH_TOKEN" "$old_api_url" \
+            -d "{\"message\":\"Rename $old_name to $new_name\",\"sha\":\"$sha\"}" > /dev/null
+    fi
+    mv "$NOTES_DIR/$old_name" "$NOTES_DIR/$new_name"
+    echo "Renamed '$old_name' to '$new_name'."
+    exit 0
+}
+
 # --- Parse Flags ---
-while getopts "hlg:t" opt; do
+while getopts "hlg:td:r:" opt; do
     case ${opt} in
         h ) show_help ;;
         l ) list_notes ;;
         g ) search_notes "$OPTARG" ;;
         t ) NOTE_NAME=$(date '+%Y-%m-%d') ;;
+        d ) delete_note "$OPTARG" ;;
+        r ) rename_note "$OPTARG" "${@:$OPTIND:1}" ;;
         \? ) show_help ;;
     esac
 done
