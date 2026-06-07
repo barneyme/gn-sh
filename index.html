@@ -483,22 +483,26 @@
 
                     <div class="intro-block">
                         <p>
-                            <code>gn</code> (Get Notes) is a simple CLI
-                            note-taking tool for people who prefer plain text
-                            over platforms. It uses Markdown files, your
-                            existing <code>$EDITOR</code>, and a private GitHub
-                            repository to create a simple, portable notes tool
-                            that works in any Bash environment - even if you
-                            don't have git installed.
+                            <code>gn</code> (Get Notes) is a zero-dependency CLI
+                            note utility that saves your markdown files directly
+                            to a private GitHub repository. It acts as a
+                            lightweight sync layer using nothing but native Bash
+                            and curl - no local Git installation or setup
+                            required.
                         </p>
                         <p>
-                            Open a note, write, save, and quit.
-                            <code>gn</code> handles the rest. It automatically
-                            pulls the latest version before you edit and pushes
-                            your changes when you're done via the GitHub API -
-                            no Git required, just <code>curl</code>. No
-                            databases, no subscriptions, no vendor lock-in -
-                            just text files and your terminal.
+                            When you run <code>gn note-name</code>, it instantly
+                            pulls the latest file version from GitHub, opens it
+                            in your default <code>$EDITOR</code>, and
+                            automatically pushes your changes via the GitHub API
+                            as soon as you save and exit.
+                        </p>
+                        <p>
+                            It runs completely in the foreground with zero
+                            background daemons, no local databases, and no
+                            tracking. It is built to give you seamless cloud
+                            backups while keeping your notes as raw, standalone
+                            text files under your own control.
                         </p>
                     </div>
 
