@@ -8,52 +8,37 @@ echo "========================================="
 NOTES_DIR="$HOME/gn"
 INSTALL_DIR="/usr/local/bin"
 
+echo "Select your Git platform provider:"
+echo "1) GitHub (github.com)"
+echo "2) GitLab (gitlab.com)"
+echo "3) Codeberg (codeberg.org)"
+read -rp "Enter choice [1-3, default 1]: " PROV_IDX
+PROV_IDX="${PROV_IDX:-1}"
+
+case "$PROV_IDX" in
+    2) GIT_PROVIDER="gitlab" ;;
+    3) GIT_PROVIDER="codeberg" ;;
+    *) GIT_PROVIDER="github" ;;
+esac
+
 echo ""
-read -rp "GitHub Personal Access Token: " GH_TOKEN
-read -rp "GitHub Username:              " GH_OWNER
-read -rp "GitHub Repository Name [gn]:  " GH_REPO
-GH_REPO="${GH_REPO:-gn}"
+echo "--- Configuring credentials for $GIT_PROVIDER ---"
+read -rp "Personal Access Token:      " GIT_TOKEN
+read -rp "Account Username:           " GIT_OWNER
+read -rp "Repository Name [gn]:       " GIT_REPO
+GIT_REPO="${GIT_REPO:-gn}"
 echo ""
 
 echo "-> Creating directory structure at $NOTES_DIR..."
 mkdir -p "$NOTES_DIR"
 
-echo "-> Writing configuration..."
+echo "-> Writing configuration profile layout..."
 cat << CONF > "$NOTES_DIR/gn.conf"
 # Configuration rules for gn command line tool
-GH_TOKEN="$GH_TOKEN"
-GH_OWNER="$GH_OWNER"
-GH_REPO="$GH_REPO"
+GIT_PROVIDER="$GIT_PROVIDER"
+GIT_TOKEN="$GIT_TOKEN"
+GIT_OWNER="$GIT_OWNER"
+GIT_REPO="$GIT_REPO"
 CONF
 chmod 600 "$NOTES_DIR/gn.conf"
-echo "   Saved: $NOTES_DIR/gn.conf"
-
-# Guard safety rails to prevent local dev overwriting
-if [ -f "$NOTES_DIR/gn.sh" ]; then
-    echo "-> Warning: A local script copy already exists at $NOTES_DIR/gn.sh"
-    read -rp "   Do you want to overwrite it with the remote production build? [y/N] " overwrite
-    if [[ "$overwrite" =~ ^[Yy]$ ]]; then
-        echo "-> Downloading production gn.sh..."
-        curl -fsSL "https://gn-notes.pages.dev/gn.sh" -o "$NOTES_DIR/gn.sh"
-    else
-        echo "   Skipped downloading gn.sh to preserve local shifts."
-    fi
-else
-    echo "-> Downloading gn.sh..."
-    curl -fsSL "https://gn-notes.pages.dev/gn.sh" -o "$NOTES_DIR/gn.sh"
-fi
-
-chmod +x "$NOTES_DIR/gn.sh"
-echo "   Ready: $NOTES_DIR/gn.sh"
-
-echo "-> Installing binary target executable..."
-if [ -d "$INSTALL_DIR" ] && [ -w "$INSTALL_DIR" ]; then
-    cp "$NOTES_DIR/gn.sh" "$INSTALL_DIR/gn"
-else
-    sudo cp "$NOTES_DIR/gn.sh" "$INSTALL_DIR/gn"
-fi
-echo "   Installed: $INSTALL_DIR/gn"
-
-echo "========================================="
-echo "Complete! Run 'gn' from your shell."
-echo "========================================="
+echo "   Saved profile properties successfully: $NOTES_DIR/gn.conf"
