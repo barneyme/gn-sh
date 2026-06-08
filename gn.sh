@@ -16,10 +16,21 @@ if [ -f "$CONFIG_FILE" ]; then
         if [[ ! "$key" =~ ^# ]] && [[ -n "$key" ]]; then
             value="${value#"${value%%[![:space:]]*}"}"
             value="${value%"${value##*[![:space:]]}"}"
+            # Strip inline comments
+            value=$(echo "$value" | sed 's/[[:space:]]*#.*//')
             if [[ "$value" == \"*\" ]] || [[ "$value" == \'*\' ]]; then
                 value="${value:1:${#value}-2}"
             fi
-            eval "$key=\"\$value\""
+            case "$key" in
+                GIT_PROVIDER) GIT_PROVIDER="$value" ;;
+                GIT_TOKEN)    GIT_TOKEN="$value" ;;
+                GIT_OWNER)    GIT_OWNER="$value" ;;
+                GIT_REPO)     GIT_REPO="$value" ;;
+                GIT_API)      GIT_API="$value" ;;
+                GH_TOKEN)     GH_TOKEN="$value" ;;
+                GH_OWNER)     GH_OWNER="$value" ;;
+                GH_REPO)      GH_REPO="$value" ;;
+            esac
         fi
     done < "$CONFIG_FILE"
 else
@@ -27,96 +38,95 @@ else
     exit 1
 fi
 
-# Fallback compatibility check for older legacy configuration files
+# Fallback compatibility for older GH_* variable names
 [ -z "$GIT_PROVIDER" ] && [ -n "$GH_TOKEN" ] && GIT_PROVIDER="github"
-[ -z "$GIT_TOKEN" ] && GIT_TOKEN="$GH_TOKEN"
-[ -z "$GIT_OWNER" ] && GIT_OWNER="$GH_OWNER"
-[ -z "$GIT_REPO" ] && GIT_REPO="$GH_REPO"
+[ -z "$GIT_TOKEN" ]   && GIT_TOKEN="$GH_TOKEN"
+[ -z "$GIT_OWNER" ]   && GIT_OWNER="$GH_OWNER"
+[ -z "$GIT_REPO" ]    && GIT_REPO="$GH_REPO"
 
 if [ -z "$GIT_PROVIDER" ] || [ -z "$GIT_TOKEN" ] || [ -z "$GIT_OWNER" ] || [ -z "$GIT_REPO" ]; then
     echo "Error: gn.conf is incomplete. Check GIT_PROVIDER, GIT_TOKEN, GIT_OWNER, and GIT_REPO."
     exit 1
 fi
 
-# Normalize provider string to lowercase
+# Normalize provider to lowercase
 GIT_PROVIDER=$(echo "$GIT_PROVIDER" | tr '[:upper:]' '[:lower:]')
 
-# Auto-compute standard target APIs if not explicitly overridden by user
+# Build API URL if not explicitly set
 if [ -z "$GIT_API" ]; then
     case "$GIT_PROVIDER" in
         github)   GIT_API="https://api.github.com/repos/$GIT_OWNER/$GIT_REPO/contents" ;;
         codeberg) GIT_API="https://codeberg.org/api/v1/repos/$GIT_OWNER/$GIT_REPO/contents" ;;
         gitlab)
-            # GitLab requires a URL-encoded project path (owner%2Frepo)
             URL_ENC_PATH=$(echo "${GIT_OWNER}/${GIT_REPO}" | sed 's/\//%2F/g')
             GIT_API="https://gitlab.com/api/v4/projects/${URL_ENC_PATH}/repository/files"
             ;;
-        *) echo "Error: Unsupported provider '$GIT_PROVIDER'"; exit 1 ;;
+        *) echo "Error: Unsupported provider '$GIT_PROVIDER'. Use github, gitlab, or codeberg."; exit 1 ;;
     esac
 fi
 
 mkdir -p "$NOTES_DIR"
 cd "$NOTES_DIR" || { echo "Error: Could not access $NOTES_DIR"; exit 1; }
 
-# --- Secure Network Call Request Router Wrapper ---
+# --- Secure curl wrapper: token written to tempfile, never exposed in ps ---
 git_curl() {
     local hdr rc
     hdr=$(mktemp)
     chmod 600 "$hdr"
-
     if [ "$GIT_PROVIDER" = "gitlab" ]; then
         echo "PRIVATE-TOKEN: $GIT_TOKEN" > "$hdr"
     else
         echo "Authorization: token $GIT_TOKEN" > "$hdr"
     fi
-
     curl -s -H "@$hdr" "$@"
     rc=$?
     rm -f "$hdr"
     return $rc
 }
 
-# --- Cloud API Sync Core Layers ---
+# --- Pull from cloud ---
 pull_from_cloud() {
     local file="$1"
     local response content http_code url_target
 
     if [ "$GIT_PROVIDER" = "gitlab" ]; then
-        # GitLab targets specific branches via explicit query strings
         local url_enc_file=$(echo "$file" | sed 's/\//%2F/g')
         url_target="${GIT_API}/${url_enc_file}?ref=main"
     else
         url_target="$GIT_API/$file"
     fi
 
+    # Capture response and HTTP status code safely
     response=$(git_curl -w "\n%{http_code}" "$url_target")
     http_code=$(echo "$response" | tail -n 1)
     response=$(echo "$response" | sed '$d')
 
+    # If the file doesn't exist on the server yet, exit the function cleanly
     if [ "$http_code" = "404" ]; then
         return 0
     fi
+
     if [ "$http_code" != "200" ]; then
-        echo "Error: pull failed (HTTP $http_code). Check token and access rules." >&2
+        echo "Error: Pull operation failed (HTTP $http_code). Check permissions/tokens." >&2
         exit 1
     fi
 
-    # Native Bash extraction wrapper across JSON structures
-    content=""
-    while read -r line; do
-        if [[ "$line" =~ \"content\":\ *\"([^\"]+)\" ]]; then
-            content="${BASH_REMATCH[1]}"
-            break
+    # Strict content parsing extraction sequence
+    content=$(echo "$response" | grep '"content"' | head -n 1 | sed 's/.*"content": *"\(.*\)".*/\1/' | tr -d '\\n[:space:]"')
+
+    # Clear out escaped literal newlines (\n) string characters sometimes returned by the API
+    content=$(echo "$content" | sed 's/\\n//g')
+
+    # Ensure $content is absolutely not null or empty before running base64 decoders
+    if [ -n "$content" ] && [ "$content" != "null" ]; then
+        # Try cross-platform base64 flags natively without breaking standard streams
+        if ! echo "$content" | base64 -d > "$file" 2>/dev/null; then
+            echo "$content" | base64 -D > "$file" 2>/dev/null
         fi
-    done <<< "$response"
-
-    content=$(echo "$content" | tr -d '\\n[:space:]')
-
-    if [ -n "$content" ]; then
-        echo "$content" | base64 -d > "$file" 2>/dev/null || echo "$content" | base64 -D > "$file"
     fi
 }
 
+# --- Push to cloud ---
 push_to_cloud() {
     local file="$1"
     local sha content msg url_target sha_response push_response http_code req_method payload
@@ -124,23 +134,20 @@ push_to_cloud() {
     msg="Note update: $file on $(date '+%Y-%m-%d %H:%M:%S')"
 
     if [ "$GIT_PROVIDER" = "gitlab" ]; then
-        local url_enc_file=$(echo "$file" | sed 's/\//%2F/g')
+        local url_enc_file
+        url_enc_file=$(echo "$file" | sed 's/\//%2F/g')
         url_target="${GIT_API}/${url_enc_file}"
-
-        # GitLab requires checking existence first to determine if POST or PUT is used
-        local check_status=$(git_curl -o /dev/null -w "%{http_code}" "${url_target}?ref=main")
+        local check_status
+        check_status=$(git_curl -o /dev/null -w "%{http_code}" "${url_target}?ref=main")
         if [ "$check_status" = "200" ]; then
             req_method="PUT"
         else
             req_method="POST"
         fi
         payload="{\"branch\":\"main\",\"commit_message\":\"$msg\",\"content\":\"$content\",\"encoding\":\"base64\"}"
-
         push_response=$(git_curl -w "\n%{http_code}" -H "Content-Type: application/json" -X "$req_method" -d "$payload" "$url_target")
         http_code=$(echo "$push_response" | tail -n 1)
-
     else
-        # GitHub & Codeberg target mechanics
         url_target="$GIT_API/$file"
         sha_response=$(git_curl "$url_target")
         sha=""
@@ -150,7 +157,6 @@ push_to_cloud() {
         local sha_field=""
         [ -n "$sha" ] && sha_field=",\"sha\":\"$sha\""
         payload="{\"message\":\"$msg\",\"content\":\"$content\"$sha_field,\"branch\":\"main\"}"
-
         push_response=$(git_curl -w "\n%{http_code}" -X PUT -d "$payload" "$url_target")
         http_code=$(echo "$push_response" | tail -n 1)
     fi
@@ -160,3 +166,177 @@ push_to_cloud() {
         exit 1
     fi
 }
+
+# --- Help ---
+show_help() {
+    echo "Usage: gn [options] [note_name]"
+    echo ""
+    echo "Options:"
+    echo "  -h        Show this help message"
+    echo "  -l        List all notes in your notes directory"
+    echo "  -g QUERY  Search for text across all notes (grep)"
+    echo "  -t        Quickly open today's journal note (YYYY-MM-DD.md)"
+    echo "  -d NOTE   Delete a note locally and from GitHub"
+    echo "  -r OLD NEW  Rename a note locally and on GitHub"
+    echo ""
+    echo "Examples:"
+    echo "  gn                  Opens index.md"
+    echo "  gn log              Creates or opens log.md"
+    echo "  gn work/todo        Opens work/todo.md"
+    echo "  gn -g 'api key'     Searches notes for the term 'api key'"
+    echo "  gn -t               Opens today's date as a note"
+    exit 0
+}
+
+# --- List notes ---
+list_notes() {
+    echo "Current Notes in $NOTES_DIR:"
+    if [ -d "$NOTES_DIR" ]; then
+        find . -type f -not -name "gn.conf" -not -name "gn.sh" -not -path '*/.*' | sed 's|^./||' | sort
+    fi
+    exit 0
+}
+
+# --- Search notes ---
+search_notes() {
+    echo "Searching for '$1' inside notes..."
+    grep -Rin "$1" . --exclude-dir=".git" --exclude="gn.conf" --exclude="gn.sh"
+    exit 0
+}
+
+# --- Delete note ---
+delete_note() {
+    local file="$1"
+    if [[ "$file" != *.md ]]; then
+        file="${file}.md"
+    fi
+    if [ ! -f "$NOTES_DIR/$file" ]; then
+        echo "Error: '$file' not found locally."
+        exit 1
+    fi
+    read -r -p "Delete '$file'? This cannot be undone. [y/N] " confirm
+    [[ "$confirm" =~ ^[Yy]$ ]] || { echo "Aborted."; exit 0; }
+
+    local sha api_url sha_response delete_response http_code
+    api_url="$GIT_API/$file"
+    sha_response=$(git_curl "$api_url")
+    sha=""
+    if [[ "$sha_response" =~ \"sha\":\ *\"([^\"]+)\" ]]; then
+        sha="${BASH_REMATCH[1]}"
+    fi
+
+    if [ -n "$sha" ]; then
+        delete_response=$(git_curl -w "\n%{http_code}" -X DELETE "$api_url" \
+            -d "{\"message\":\"Delete $file\",\"sha\":\"$sha\"}")
+        http_code=$(echo "$delete_response" | tail -n 1)
+        if [ "$http_code" != "200" ]; then
+            echo "Error: Failed to delete from remote (HTTP $http_code). Aborting local deletion." >&2
+            exit 1
+        fi
+        echo "Deleted from remote."
+    else
+        echo "Warning: File not found on remote. Removing locally only."
+    fi
+    rm "$NOTES_DIR/$file"
+    echo "Deleted '$file'."
+    exit 0
+}
+
+# --- Rename note ---
+rename_note() {
+    local old_name="$1"
+    local new_name="$2"
+    if [[ "$old_name" != *.md ]]; then old_name="${old_name}.md"; fi
+    if [[ "$new_name" != *.md ]]; then new_name="${new_name}.md"; fi
+
+    if [ ! -f "$NOTES_DIR/$old_name" ]; then
+        echo "Error: '$old_name' not found locally."
+        exit 1
+    fi
+    if [ -f "$NOTES_DIR/$new_name" ]; then
+        echo "Error: '$new_name' already exists."
+        exit 1
+    fi
+
+    local sha old_api_url new_api_url sha_response content push_response delete_response http_code
+    old_api_url="$GIT_API/$old_name"
+    new_api_url="$GIT_API/$new_name"
+    sha_response=$(git_curl "$old_api_url")
+    sha=""
+    if [[ "$sha_response" =~ \"sha\":\ *\"([^\"]+)\" ]]; then
+        sha="${BASH_REMATCH[1]}"
+    fi
+
+    content=$(base64 -w0 < "$NOTES_DIR/$old_name" 2>/dev/null || base64 < "$NOTES_DIR/$old_name" | tr -d '\n')
+
+    push_response=$(git_curl -w "\n%{http_code}" -X PUT "$new_api_url" \
+        -d "{\"message\":\"Rename $old_name to $new_name\",\"content\":\"$content\",\"branch\":\"main\"}")
+    http_code=$(echo "$push_response" | tail -n 1)
+    if [ "$http_code" != "200" ] && [ "$http_code" != "201" ]; then
+        echo "Error: Failed to create '$new_name' on remote (HTTP $http_code). No changes made." >&2
+        exit 1
+    fi
+
+    if [ -n "$sha" ]; then
+        delete_response=$(git_curl -w "\n%{http_code}" -X DELETE "$old_api_url" \
+            -d "{\"message\":\"Rename $old_name to $new_name\",\"sha\":\"$sha\"}")
+        http_code=$(echo "$delete_response" | tail -n 1)
+        if [ "$http_code" != "200" ]; then
+            echo "Warning: New note created on remote, but old note could not be removed automatically." >&2
+        fi
+    fi
+
+    mv "$NOTES_DIR/$old_name" "$NOTES_DIR/$new_name"
+    echo "Renamed '$old_name' to '$new_name'."
+    exit 0
+}
+
+# --- Handle -r before getopts (needs two arguments) ---
+if [ "$1" = "-r" ]; then
+    if [ -z "$2" ] || [ -z "$3" ]; then
+        echo "Error: -r requires two arguments: gn -r OLD NEW"
+        exit 1
+    fi
+    rename_note "$2" "$3"
+fi
+
+# --- Parse flags ---
+while getopts "hlg:td:" opt; do
+    case ${opt} in
+        h ) show_help ;;
+        l ) list_notes ;;
+        g ) search_notes "$OPTARG" ;;
+        t ) NOTE_NAME=$(date '+%Y-%m-%d') ;;
+        d ) delete_note "$OPTARG" ;;
+        \? ) show_help ;;
+    esac
+done
+shift $((OPTIND -1))
+
+if [ -z "$NOTE_NAME" ]; then
+    NOTE_NAME="${1:-index}"
+fi
+
+if [[ "$NOTE_NAME" == "gn.conf" || "$NOTE_NAME" == "gn.sh" ]]; then
+    echo "Error: Protection rule triggered. Cannot touch runtime files via gn."
+    exit 1
+fi
+
+if [[ "$NOTE_NAME" != *.md ]]; then
+    NOTE_NAME="${NOTE_NAME}.md"
+fi
+
+NOTE_DIR_PATH=$(dirname "$NOTE_NAME")
+if [ "$NOTE_DIR_PATH" != "." ]; then
+    mkdir -p "$NOTE_DIR_PATH"
+fi
+
+# --- Sync, edit, sync ---
+echo "Fetching latest version..."
+pull_from_cloud "$NOTE_NAME"
+
+${EDITOR:-nano} "$NOTE_NAME"
+
+echo "Syncing to remote..."
+push_to_cloud "$NOTE_NAME"
+echo "Sync complete!"
