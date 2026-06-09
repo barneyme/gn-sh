@@ -52,24 +52,53 @@ fi
 # Normalize provider to lowercase
 GIT_PROVIDER=$(echo "$GIT_PROVIDER" | tr '[:upper:]' '[:lower:]')
 
-# Build API URL if not explicitly set
+# --- Dynamic API URL Constructor ---
 if [ -z "$GIT_API" ]; then
     case "$GIT_PROVIDER" in
-        github)    GIT_API="https://api.github.com/repos/$GIT_OWNER/$GIT_REPO/contents" ;;
-        codeberg)  GIT_API="https://codeberg.org/api/v1/repos/$GIT_OWNER/$GIT_REPO/contents" ;;
-        bitbucket) GIT_API="https://api.bitbucket.org/2.0/repositories/$GIT_OWNER/$GIT_REPO" ;;
         gitlab)
             URL_ENC_PATH=$(echo "${GIT_OWNER}/${GIT_REPO}" | sed 's/\//%2F/g')
             GIT_API="https://gitlab.com/api/v4/projects/${URL_ENC_PATH}/repository/files"
             ;;
-        *) echo "Error: Unsupported provider '$GIT_PROVIDER'. Use github, gitlab, codeberg, or bitbucket."; exit 1 ;;
+        codeberg)
+            GIT_API="https://codeberg.org/api/v1/repos/${GIT_OWNER}/${GIT_REPO}/contents"
+            ;;
+        bitbucket)
+            GIT_API="https://api.bitbucket.org/2.0/repositories/${GIT_OWNER}/${GIT_REPO}"
+            ;;
+        *)
+            GIT_API="https://api.github.com/repos/${GIT_OWNER}/${GIT_REPO}/contents"
+            ;;
     esac
 fi
 
-mkdir -p "$NOTES_DIR"
-cd "$NOTES_DIR" || { echo "Error: Could not access $NOTES_DIR"; exit 1; }
+# Determine default terminal text editor
+EDITOR="${EDITOR:-nano}"
 
-# --- Secure curl wrapper: token written to tempfile, never exposed in ps ---
+# --- Check Dependencies ---
+for cmd in curl grep sed base64 tr; do
+    if ! command -v "$cmd" &> /dev/null; then
+        echo "Error: Required dependency '$cmd' is missing." >&2
+        exit 1
+    fi
+done
+
+# --- Helper Functions ---
+show_help() {
+    echo "Usage: gn [options] [note_name]"
+    echo ""
+    echo "Options:"
+    echo "  -h          Show this help summary"
+    echo "  -l          List all local and remote tracking notes"
+    echo "  -g PATTERN  Search content across notes for a regex pattern (grep)"
+    echo "  -t          Open/create a note named after today's date (YYYY-MM-DD)"
+    echo "  -d NOTE     Delete a note locally and push removal upstream"
+    echo "  -r OLD NEW  Rename a note locally and swap its tracking upstream"
+    echo ""
+    echo "Defaults to opening 'index' if no note_name is specified."
+    exit 0
+}
+
+# Secure network hook to protect credentials from OS process logs
 git_curl() {
     local hdr rc
     hdr=$(mktemp)
@@ -78,9 +107,10 @@ git_curl() {
         echo "PRIVATE-TOKEN: $GIT_TOKEN" > "$hdr"
         curl -s -H "@$hdr" "$@"
     elif [ "$GIT_PROVIDER" = "bitbucket" ]; then
-        # Bitbucket uses HTTP Basic auth: GIT_OWNER:GIT_TOKEN (app password)
-        rm -f "$hdr"
-        curl -s -u "$GIT_OWNER:$GIT_TOKEN" "$@"
+        local auth_base64
+        auth_base64=$(echo -n "$GIT_OWNER:$GIT_TOKEN" | base64)
+        echo "Authorization: Basic $auth_base64" > "$hdr"
+        curl -s -H "@$hdr" "$@"
     else
         echo "Authorization: token $GIT_TOKEN" > "$hdr"
         curl -s -H "@$hdr" "$@"
@@ -90,27 +120,12 @@ git_curl() {
     return $rc
 }
 
-# --- Pull from cloud ---
 pull_from_cloud() {
     local file="$1"
     local response content http_code url_target
 
     if [ "$GIT_PROVIDER" = "bitbucket" ]; then
-        # Bitbucket /src endpoint returns raw file content directly
         url_target="${GIT_API}/src/main/$file"
-        response=$(git_curl -w "\n%{http_code}" "$url_target")
-        http_code=$(echo "$response" | tail -n 1)
-        response=$(echo "$response" | sed '$d')
-        if [ "$http_code" = "404" ]; then
-            return 0
-        fi
-        if [ "$http_code" != "200" ]; then
-            echo "Error: Pull operation failed (HTTP $http_code). Check permissions/tokens." >&2
-            exit 1
-        fi
-        # Response is raw file content — write directly
-        printf '%s' "$response" > "$file"
-        return 0
     elif [ "$GIT_PROVIDER" = "gitlab" ]; then
         local url_enc_file=$(echo "$file" | sed 's/\//%2F/g')
         url_target="${GIT_API}/${url_enc_file}?ref=main"
@@ -118,12 +133,10 @@ pull_from_cloud() {
         url_target="$GIT_API/$file"
     fi
 
-    # Capture response and HTTP status code safely
     response=$(git_curl -w "\n%{http_code}" "$url_target")
     http_code=$(echo "$response" | tail -n 1)
     response=$(echo "$response" | sed '$d')
 
-    # If the file doesn't exist on the server yet, exit the function cleanly
     if [ "$http_code" = "404" ]; then
         return 0
     fi
@@ -133,22 +146,21 @@ pull_from_cloud() {
         exit 1
     fi
 
-    # Strict content parsing extraction sequence
-    content=$(echo "$response" | grep '"content"' | head -n 1 | sed 's/.*"content": *"\(.*\)".*/\1/' | tr -d '\\n[:space:]"')
+    if [ "$GIT_PROVIDER" = "bitbucket" ]; then
+        printf '%s' "$response" > "$file"
+        return 0
+    fi
 
-    # Clear out escaped literal newlines (\n) string characters sometimes returned by the API
+    content=$(echo "$response" | grep '"content"' | head -n 1 | sed 's/.*"content": *"\(.*\)".*/\1/' | tr -d '\\n[:space:]"')
     content=$(echo "$content" | sed 's/\\n//g')
 
-    # Ensure $content is absolutely not null or empty before running base64 decoders
     if [ -n "$content" ] && [ "$content" != "null" ]; then
-        # Try cross-platform base64 flags natively without breaking standard streams
         if ! echo "$content" | base64 -d > "$file" 2>/dev/null; then
             echo "$content" | base64 -D > "$file" 2>/dev/null
         fi
     fi
 }
 
-# --- Push to cloud ---
 push_to_cloud() {
     local file="$1"
     local sha content msg url_target sha_response push_response http_code req_method payload
@@ -156,86 +168,71 @@ push_to_cloud() {
     msg="Note update: $file on $(date '+%Y-%m-%d %H:%M:%S')"
 
     if [ "$GIT_PROVIDER" = "bitbucket" ]; then
-        # Bitbucket uses multipart form POST to /src — no SHA needed for create/update
         url_target="${GIT_API}/src"
         push_response=$(git_curl -w "\n%{http_code}" -X POST \
             -F "message=$msg" \
             -F "branch=main" \
-            -F "$file=@$file" \
+            -F "/$file=@$file" \
             "$url_target")
         http_code=$(echo "$push_response" | tail -n 1)
-    elif [ "$GIT_PROVIDER" = "gitlab" ]; then
-        local url_enc_file
-        url_enc_file=$(echo "$file" | sed 's/\//%2F/g')
+
+        if [ "$http_code" != "201" ] && [ "$http_code" != "200" ]; then
+            echo "Error: Push operation failed upstream (HTTP $http_code)." >&2
+            exit 1
+        fi
+        return 0
+    fi
+
+    if [ "$GIT_PROVIDER" = "gitlab" ]; then
+        local url_enc_file=$(echo "$file" | sed 's/\//%2F/g')
         url_target="${GIT_API}/${url_enc_file}"
-        local check_status
-        check_status=$(git_curl -o /dev/null -w "%{http_code}" "${url_target}?ref=main")
-        if [ "$check_status" = "200" ]; then
+        sha_response=$(git_curl -w "\n%{http_code}" "${url_target}?ref=main")
+        http_code=$(echo "$sha_response" | tail -n 1)
+
+        if [ "$http_code" = "200" ]; then
             req_method="PUT"
         else
             req_method="POST"
         fi
-        payload="{\"branch\":\"main\",\"commit_message\":\"$msg\",\"content\":\"$content\",\"encoding\":\"base64\"}"
-        push_response=$(git_curl -w "\n%{http_code}" -H "Content-Type: application/json" -X "$req_method" -d "$payload" "$url_target")
-        http_code=$(echo "$push_response" | tail -n 1)
+        payload="{\"branch\": \"main\", \"commit_message\": \"$msg\", \"content\": \"$content\", \"encoding\": \"base64\"}"
     else
         url_target="$GIT_API/$file"
-        sha_response=$(git_curl "$url_target")
+        sha_response=$(git_curl -s "$url_target")
         sha=""
         if [[ "$sha_response" =~ \"sha\":\ *\"([^\"]+)\" ]]; then
             sha="${BASH_REMATCH[1]}"
         fi
-        local sha_field=""
-        [ -n "$sha" ] && sha_field=",\"sha\":\"$sha\""
-        payload="{\"message\":\"$msg\",\"content\":\"$content\"$sha_field,\"branch\":\"main\"}"
-        push_response=$(git_curl -w "\n%{http_code}" -X PUT -d "$payload" "$url_target")
-        http_code=$(echo "$push_response" | tail -n 1)
+        req_method="PUT"
+        if [ -n "$sha" ]; then
+            payload="{\"message\": \"$msg\", \"content\": \"$content\", \"sha\": \"$sha\", \"branch\": \"main\"}"
+        else
+            payload="{\"message\": \"$msg\", \"content\": \"$content\", \"branch\": \"main\"}"
+        fi
     fi
 
-    if [ "$http_code" != "200" ] && [ "$http_code" != "201" ]; then
-        echo "Error: push failed (HTTP $http_code). Changes saved locally, but not synced." >&2
+    push_response=$(git_curl -w "\n%{http_code}" -X "$req_method" -H "Content-Type: application/json" -d "$payload" "$url_target")
+    http_code=$(echo "$push_response" | tail -n 1)
+
+    if [[ "$http_code" != "200" && "$http_code" != "201" ]]; then
+        echo "Error: Push operation failed upstream (HTTP $http_code)." >&2
         exit 1
     fi
 }
 
-# --- Help ---
-show_help() {
-    echo "Usage: gn [options] [note_name]"
-    echo ""
-    echo "Options:"
-    echo "  -h        Show this help message"
-    echo "  -l        List all notes in your notes directory"
-    echo "  -g QUERY  Search for text across all notes (grep)"
-    echo "  -t        Quickly open today's journal note (YYYY-MM-DD.md)"
-    echo "  -d NOTE   Delete a note locally and from GitHub"
-    echo "  -r OLD NEW  Rename a note locally and on GitHub"
-    echo ""
-    echo "Examples:"
-    echo "  gn                  Opens index.md"
-    echo "  gn log              Creates or opens log.md"
-    echo "  gn work/todo        Opens work/todo.md"
-    echo "  gn -g 'api key'     Searches notes for the term 'api key'"
-    echo "  gn -t               Opens today's date as a note"
-    exit 0
-}
-
-# --- List notes ---
 list_notes() {
-    echo "Current Notes in $NOTES_DIR:"
+    echo "=== Notes Workspace Tracking: $NOTES_DIR ==="
     if [ -d "$NOTES_DIR" ]; then
         find . -type f -not -name "gn.conf" -not -name "gn.sh" -not -path '*/.*' | sed 's|^./||' | sort
     fi
     exit 0
 }
 
-# --- Search notes ---
 search_notes() {
-    echo "Searching for '$1' inside notes..."
+    echo "=== Searching structural contents for: '$1' ==="
     grep -Rin "$1" . --exclude-dir=".git" --exclude="gn.conf" --exclude="gn.sh"
     exit 0
 }
 
-# --- Delete note ---
 delete_note() {
     local file="$1"
     if [[ "$file" != *.md ]]; then
@@ -248,43 +245,52 @@ delete_note() {
     read -r -p "Delete '$file'? This cannot be undone. [y/N] " confirm
     [[ "$confirm" =~ ^[Yy]$ ]] || { echo "Aborted."; exit 0; }
 
-    local sha api_url sha_response delete_response http_code
-    api_url="$GIT_API/$file"
+    local sha msg url_target delete_response http_code push_response
+    msg="Note deletion: $file on $(date '+%Y-%m-%d %H:%M:%S')"
 
     if [ "$GIT_PROVIDER" = "bitbucket" ]; then
-        # Bitbucket Cloud REST API does not support deleting individual files.
-        # Remove locally only and warn the user.
-        echo "Warning: Bitbucket does not support remote file deletion via API."
-        echo "Removing '$file' locally only. Delete it manually from your repo if needed."
-        rm "$NOTES_DIR/$file"
-        echo "Deleted '$file' locally."
-        exit 0
-    fi
-
-    sha_response=$(git_curl "$api_url")
-    sha=""
-    if [[ "$sha_response" =~ \"sha\":\ *\"([^\"]+)\" ]]; then
-        sha="${BASH_REMATCH[1]}"
-    fi
-
-    if [ -n "$sha" ]; then
-        delete_response=$(git_curl -w "\n%{http_code}" -X DELETE "$api_url" \
-            -d "{\"message\":\"Delete $file\",\"sha\":\"$sha\"}")
+        url_target="${GIT_API}/src"
+        push_response=$(git_curl -w "\n%{http_code}" -X POST \
+            -F "files=/$file" \
+            -F "message=$msg" \
+            -F "branch=main" \
+            "$url_target")
+        http_code=$(echo "$push_response" | tail -n 1)
+        if [[ "$http_code" != "200" && "$http_code" != "201" ]]; then
+            echo "Warning: Local file removed, but remote deletion failed on Bitbucket (HTTP $http_code)." >&2
+        fi
+    elif [ "$GIT_PROVIDER" = "gitlab" ]; then
+        local url_enc_file=$(echo "$file" | sed 's/\//%2F/g')
+        url_target="${GIT_API}/${url_enc_file}"
+        payload="{\"branch\": \"main\", \"commit_message\": \"$msg\"}"
+        delete_response=$(git_curl -w "\n%{http_code}" -X DELETE -H "Content-Type: application/json" -d "$payload" "$url_target")
         http_code=$(echo "$delete_response" | tail -n 1)
         if [ "$http_code" != "200" ]; then
-            echo "Error: Failed to delete from remote (HTTP $http_code). Aborting local deletion." >&2
-            exit 1
+            echo "Warning: Remote file could not be dropped from GitLab repo lifecycle." >&2
         fi
-        echo "Deleted from remote."
     else
-        echo "Warning: File not found on remote. Removing locally only."
+        url_target="$GIT_API/$file"
+        local sha_response
+        sha_response=$(git_curl -s "$url_target")
+        sha=""
+        if [[ "$sha_response" =~ \"sha\":\ *\"([^\"]+)\" ]]; then
+            sha="${BASH_REMATCH[1]}"
+        fi
+        if [ -n "$sha" ]; then
+            payload="{\"message\": \"$msg\", \"sha\": \"$sha\", \"branch\": \"main\"}"
+            delete_response=$(git_curl -w "\n%{http_code}" -X DELETE -H "Content-Type: application/json" -d "$payload" "$url_target")
+            http_code=$(echo "$delete_response" | tail -n 1)
+            if [ "$http_code" != "200" ]; then
+                echo "Warning: Remote node reference asset drop rejected upstream." >&2
+            fi
+        fi
     fi
+
     rm "$NOTES_DIR/$file"
     echo "Deleted '$file'."
     exit 0
 }
 
-# --- Rename note ---
 rename_note() {
     local old_name="$1"
     local new_name="$2"
@@ -300,52 +306,48 @@ rename_note() {
         exit 1
     fi
 
-    local sha old_api_url new_api_url sha_response content push_response delete_response http_code
-    old_api_url="$GIT_API/$old_name"
-    new_api_url="$GIT_API/$new_name"
+    local sha msg url_target delete_response http_code push_response payload
+    msg="Note migration: Rename $old_name to $new_name"
+
+    echo "Renaming tracking asset matches upstream..."
+    cp "$old_name" "$new_name"
+    push_to_cloud "$new_name"
 
     if [ "$GIT_PROVIDER" = "bitbucket" ]; then
-        # Bitbucket: push new file via /src, then warn about manual cleanup of old
-        local msg="Rename $old_name to $new_name"
+        url_target="${GIT_API}/src"
         push_response=$(git_curl -w "\n%{http_code}" -X POST \
+            -F "files=/$old_name" \
             -F "message=$msg" \
             -F "branch=main" \
-            -F "$new_name=@$NOTES_DIR/$old_name" \
-            "${GIT_API}/src")
+            "$url_target")
         http_code=$(echo "$push_response" | tail -n 1)
-        if [ "$http_code" != "200" ] && [ "$http_code" != "201" ]; then
-            echo "Error: Failed to create '$new_name' on remote (HTTP $http_code). No changes made." >&2
-            exit 1
+        if [[ "$http_code" != "200" && "$http_code" != "201" ]]; then
+            echo "Warning: Remote source cleanup rejected by Bitbucket API." >&2
         fi
-        mv "$NOTES_DIR/$old_name" "$NOTES_DIR/$new_name"
-        echo "Renamed '$old_name' to '$new_name'."
-        echo "Warning: Bitbucket does not support remote file deletion via API."
-        echo "Please delete '$old_name' manually from your Bitbucket repo."
-        exit 0
-    fi
-
-    sha_response=$(git_curl "$old_api_url")
-    sha=""
-    if [[ "$sha_response" =~ \"sha\":\ *\"([^\"]+)\" ]]; then
-        sha="${BASH_REMATCH[1]}"
-    fi
-
-    content=$(base64 -w0 < "$NOTES_DIR/$old_name" 2>/dev/null || base64 < "$NOTES_DIR/$old_name" | tr -d '\n')
-
-    push_response=$(git_curl -w "\n%{http_code}" -X PUT "$new_api_url" \
-        -d "{\"message\":\"Rename $old_name to $new_name\",\"content\":\"$content\",\"branch\":\"main\"}")
-    http_code=$(echo "$push_response" | tail -n 1)
-    if [ "$http_code" != "200" ] && [ "$http_code" != "201" ]; then
-        echo "Error: Failed to create '$new_name' on remote (HTTP $http_code). No changes made." >&2
-        exit 1
-    fi
-
-    if [ -n "$sha" ]; then
-        delete_response=$(git_curl -w "\n%{http_code}" -X DELETE "$old_api_url" \
-            -d "{\"message\":\"Rename $old_name to $new_name\",\"sha\":\"$sha\"}")
+    elif [ "$GIT_PROVIDER" = "gitlab" ]; then
+        local url_enc_file=$(echo "$old_name" | sed 's/\//%2F/g')
+        url_target="${GIT_API}/${url_enc_file}"
+        payload="{\"branch\": \"main\", \"commit_message\": \"$msg\"}"
+        delete_response=$(git_curl -w "\n%{http_code}" -X DELETE -H "Content-Type: application/json" -d "$payload" "$url_target")
         http_code=$(echo "$delete_response" | tail -n 1)
         if [ "$http_code" != "200" ]; then
-            echo "Warning: New note created on remote, but old note could not be removed automatically." >&2
+            echo "Warning: Remote legacy artifact cleanup failed upstream on GitLab." >&2
+        fi
+    else
+        url_target="$GIT_API/$old_name"
+        local sha_response
+        sha_response=$(git_curl -s "$url_target")
+        sha=""
+        if [[ "$sha_response" =~ \"sha\":\ *\"([^\"]+)\" ]]; then
+            sha="${BASH_REMATCH[1]}"
+        fi
+        if [ -n "$sha" ]; then
+            payload="{\"message\": \"$msg\", \"sha\": \"$sha\", \"branch\": \"main\"}"
+            delete_response=$(git_curl -w "\n%{http_code}" -X DELETE -H "Content-Type: application/json" -d "$payload" "$url_target")
+            http_code=$(echo "$delete_response" | tail -n 1)
+            if [ "$http_code" != "200" ]; then
+                echo "Warning: Old note could not be removed automatically from remote repo." >&2
+            fi
         fi
     fi
 
@@ -389,8 +391,13 @@ if [[ "$NOTE_NAME" != *.md ]]; then
     NOTE_NAME="${NOTE_NAME}.md"
 fi
 
+# Ensure working folder space exists and drop into context
+mkdir -p "$NOTES_DIR"
+cd "$NOTES_DIR" || { echo "Error: Could not access $NOTES_DIR"; exit 1; }
+
+# Handle nested directory creation if editing subfolders (e.g., gn work/todo)
 NOTE_DIR_PATH=$(dirname "$NOTE_NAME")
-if [ "$NOTE_DIR_PATH" != "." ]; then
+if [ "$NOTE_DIR_PATH" != "." ] && [ -n "$NOTE_DIR_PATH" ]; then
     mkdir -p "$NOTE_DIR_PATH"
 fi
 
@@ -398,8 +405,26 @@ fi
 echo "Fetching latest version..."
 pull_from_cloud "$NOTE_NAME"
 
-${EDITOR:-nano} "$NOTE_NAME"
+# Track file characteristics before user modifications
+PRE_SHA=""
+if [ -f "$NOTE_NAME" ]; then
+    PRE_SHA=$(md5sum "$NOTE_NAME" 2>/dev/null || shasum "$NOTE_NAME" 2>/dev/null)
+fi
 
-echo "Syncing to remote..."
-push_to_cloud "$NOTE_NAME"
-echo "Sync complete!"
+$EDITOR "$NOTE_NAME"
+
+# Verify file still exists after editor exit
+if [ ! -f "$NOTE_NAME" ]; then
+    echo "No target note found to save. Operation cancelled."
+    exit 0
+fi
+
+POST_SHA=$(md5sum "$NOTE_NAME" 2>/dev/null || shasum "$NOTE_NAME" 2>/dev/null)
+
+if [ "$PRE_SHA" = "$POST_SHA" ]; then
+    echo "No local changes detected. Cloud syncing skipped."
+else
+    echo "Pushing mutations upstream to cloud network..."
+    push_to_cloud "$NOTE_NAME"
+    echo "Sync complete!"
+fi
