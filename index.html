@@ -504,10 +504,10 @@
                         <p>
                             <code>gn</code> (Get Notes) is a zero-dependency CLI
                             note utility that saves your markdown files directly
-                            to a private GitHub, GitLab, or Codeberg repository.
-                            It acts as a lightweight sync layer using nothing
-                            but native Bash and curl - no local Git installation
-                            or setup required.
+                            to a private GitHub, GitLab, Codeberg, or Bitbucket
+                            repository. It acts as a lightweight sync layer
+                            using nothing but native Bash and curl - no local
+                            Git installation or setup required.
                         </p>
                         <p>
                             When you run <code>gn note-name</code>, it instantly
@@ -643,33 +643,41 @@
                     </div>
                 </div>
             </header>
-
+            <section id="quick-install">
+                <div class="run-instructions">
+                    <p>Quick install:</p>
+                    <code
+                        >curl -fsSL https://gn-notes.pages.dev/install.sh -o
+                        install.sh && chmod +x install.sh && ./install.sh</code
+                    >
+                </div>
+            </section>
             <section id="setup-prerequisites">
-                <h2>Prerequisites & Provider Configuration:</h2>
+                <h2>Prerequisites & Git Cloud Configuration:</h2>
                 <p>
-                    <code>gn</code> requires a private remote repository and a
-                    personal access token generated from your chosen host
-                    provider. Local Git software packages are not required.
+                    <code>gn</code> requires a private repository and a personal
+                    access token generated from your chosen Git host.
                 </p>
 
                 <div class="step-list">
                     <div class="step-item">
-                        <span class="step-num">0</span>
+                        <span class="step-num">1</span>
                         <span class="step-title"
                             >Git Cloud Workspace Account</span
                         >
                         <div class="step-content">
                             <p>
                                 Create an account with <strong>GitHub</strong>,
-                                <strong>GitLab</strong>, or
-                                <strong>Codeberg</strong> if you do not already
+                                <strong>GitLab</strong>,
+                                <strong>Codeberg</strong>, or
+                                <strong>Bitbucket</strong> if you do not already
                                 have one.
                             </p>
                         </div>
                     </div>
 
                     <div class="step-item">
-                        <span class="step-num">1</span>
+                        <span class="step-num">A</span>
                         <span class="step-title">GitHub Configuration</span>
                         <div class="step-content">
                             <p>
@@ -693,7 +701,7 @@
                     </div>
 
                     <div class="step-item">
-                        <span class="step-num">2</span>
+                        <span class="step-num">B</span>
                         <span class="step-title">GitLab Configuration</span>
                         <div class="step-content">
                             <p>
@@ -719,7 +727,7 @@
                     </div>
 
                     <div class="step-item">
-                        <span class="step-num">3</span>
+                        <span class="step-num">C</span>
                         <span class="step-title">Codeberg Configuration</span>
                         <div class="step-content">
                             <p>
@@ -738,6 +746,37 @@
                                     href="https://codeberg.org/user/settings/applications"
                                     target="_blank"
                                     >🔑 Direct Token Generation Link</a
+                                >
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="step-item">
+                        <span class="step-num">D</span>
+                        <span class="step-title">Bitbucket Configuration</span>
+                        <div class="step-content">
+                            <p>
+                                Create a private repository named
+                                <code>gn</code>. Bitbucket uses
+                                <strong>App Passwords</strong> rather than
+                                personal access tokens - generate one under your
+                                account settings with
+                                <strong>Repositories: Read</strong> and
+                                <strong>Write</strong> permissions checked. Use
+                                your Bitbucket username as
+                                <code>GIT_OWNER</code> and the App Password as
+                                <code>GIT_TOKEN</code>.
+                            </p>
+                            <div class="external-links">
+                                <a
+                                    href="https://support.atlassian.com/bitbucket-cloud/docs/app-passwords/"
+                                    target="_blank"
+                                    >🔗 Bitbucket App Passwords Docs</a
+                                >
+                                <a
+                                    href="https://bitbucket.org/account/settings/app-passwords/new"
+                                    target="_blank"
+                                    >🔑 Direct App Password Creation Link</a
                                 >
                             </div>
                         </div>
@@ -851,10 +890,10 @@
 nano ~/gn/gn.conf
 chmod 600 ~/gn/gn.conf</code></pre>
                             <p>
-                                Add these four core values, adjusting for your
-                                personal platform profile context:
+                                Add these four values, adjusting for your chosen
+                                Git platform:
                             </p>
-                            <pre><code>GIT_PROVIDER=github
+                            <pre><code>GIT_PROVIDER=git_cloud_provider
 GIT_TOKEN=your_personal_access_token_here
 GIT_OWNER=your_username
 GIT_REPO=gn</code></pre>
@@ -870,20 +909,22 @@ GIT_REPO=gn</code></pre>
                                     <strong>GIT_PROVIDER</strong> - Your target
                                     hosting provider platform
                                     (<code>github</code>, <code>gitlab</code>,
-                                    or <code>codeberg</code>).
+                                    <code>codeberg</code>, or
+                                    <code>bitbucket</code>).
                                 </li>
                                 <li>
-                                    <strong>GIT_TOKEN</strong> - Your workspace
-                                    security authorization token with repository
-                                    write permissions.
+                                    <strong>GIT_TOKEN</strong> - Your personal
+                                    access token with repository write
+                                    permissions. For Bitbucket, use an
+                                    <strong>App Password</strong> instead.
                                 </li>
                                 <li>
-                                    <strong>GIT_OWNER</strong> - Your explicit
-                                    user account handle name.
+                                    <strong>GIT_OWNER</strong> - Your user
+                                    account name.
                                 </li>
                                 <li>
                                     <strong>GIT_REPO</strong> - The name of the
-                                    remote target repository (defaults to
+                                    private repository (defaults to
                                     <code>gn</code>).
                                 </li>
                             </ul>

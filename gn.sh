@@ -55,13 +55,14 @@ GIT_PROVIDER=$(echo "$GIT_PROVIDER" | tr '[:upper:]' '[:lower:]')
 # Build API URL if not explicitly set
 if [ -z "$GIT_API" ]; then
     case "$GIT_PROVIDER" in
-        github)   GIT_API="https://api.github.com/repos/$GIT_OWNER/$GIT_REPO/contents" ;;
-        codeberg) GIT_API="https://codeberg.org/api/v1/repos/$GIT_OWNER/$GIT_REPO/contents" ;;
+        github)    GIT_API="https://api.github.com/repos/$GIT_OWNER/$GIT_REPO/contents" ;;
+        codeberg)  GIT_API="https://codeberg.org/api/v1/repos/$GIT_OWNER/$GIT_REPO/contents" ;;
+        bitbucket) GIT_API="https://api.bitbucket.org/2.0/repositories/$GIT_OWNER/$GIT_REPO" ;;
         gitlab)
             URL_ENC_PATH=$(echo "${GIT_OWNER}/${GIT_REPO}" | sed 's/\//%2F/g')
             GIT_API="https://gitlab.com/api/v4/projects/${URL_ENC_PATH}/repository/files"
             ;;
-        *) echo "Error: Unsupported provider '$GIT_PROVIDER'. Use github, gitlab, or codeberg."; exit 1 ;;
+        *) echo "Error: Unsupported provider '$GIT_PROVIDER'. Use github, gitlab, codeberg, or bitbucket."; exit 1 ;;
     esac
 fi
 
@@ -75,10 +76,15 @@ git_curl() {
     chmod 600 "$hdr"
     if [ "$GIT_PROVIDER" = "gitlab" ]; then
         echo "PRIVATE-TOKEN: $GIT_TOKEN" > "$hdr"
+        curl -s -H "@$hdr" "$@"
+    elif [ "$GIT_PROVIDER" = "bitbucket" ]; then
+        # Bitbucket uses HTTP Basic auth: GIT_OWNER:GIT_TOKEN (app password)
+        rm -f "$hdr"
+        curl -s -u "$GIT_OWNER:$GIT_TOKEN" "$@"
     else
         echo "Authorization: token $GIT_TOKEN" > "$hdr"
+        curl -s -H "@$hdr" "$@"
     fi
-    curl -s -H "@$hdr" "$@"
     rc=$?
     rm -f "$hdr"
     return $rc
@@ -89,7 +95,23 @@ pull_from_cloud() {
     local file="$1"
     local response content http_code url_target
 
-    if [ "$GIT_PROVIDER" = "gitlab" ]; then
+    if [ "$GIT_PROVIDER" = "bitbucket" ]; then
+        # Bitbucket /src endpoint returns raw file content directly
+        url_target="${GIT_API}/src/main/$file"
+        response=$(git_curl -w "\n%{http_code}" "$url_target")
+        http_code=$(echo "$response" | tail -n 1)
+        response=$(echo "$response" | sed '$d')
+        if [ "$http_code" = "404" ]; then
+            return 0
+        fi
+        if [ "$http_code" != "200" ]; then
+            echo "Error: Pull operation failed (HTTP $http_code). Check permissions/tokens." >&2
+            exit 1
+        fi
+        # Response is raw file content — write directly
+        printf '%s' "$response" > "$file"
+        return 0
+    elif [ "$GIT_PROVIDER" = "gitlab" ]; then
         local url_enc_file=$(echo "$file" | sed 's/\//%2F/g')
         url_target="${GIT_API}/${url_enc_file}?ref=main"
     else
@@ -133,7 +155,16 @@ push_to_cloud() {
     content=$(base64 -w0 < "$file" 2>/dev/null || base64 < "$file" | tr -d '\n')
     msg="Note update: $file on $(date '+%Y-%m-%d %H:%M:%S')"
 
-    if [ "$GIT_PROVIDER" = "gitlab" ]; then
+    if [ "$GIT_PROVIDER" = "bitbucket" ]; then
+        # Bitbucket uses multipart form POST to /src — no SHA needed for create/update
+        url_target="${GIT_API}/src"
+        push_response=$(git_curl -w "\n%{http_code}" -X POST \
+            -F "message=$msg" \
+            -F "branch=main" \
+            -F "$file=@$file" \
+            "$url_target")
+        http_code=$(echo "$push_response" | tail -n 1)
+    elif [ "$GIT_PROVIDER" = "gitlab" ]; then
         local url_enc_file
         url_enc_file=$(echo "$file" | sed 's/\//%2F/g')
         url_target="${GIT_API}/${url_enc_file}"
@@ -219,6 +250,17 @@ delete_note() {
 
     local sha api_url sha_response delete_response http_code
     api_url="$GIT_API/$file"
+
+    if [ "$GIT_PROVIDER" = "bitbucket" ]; then
+        # Bitbucket Cloud REST API does not support deleting individual files.
+        # Remove locally only and warn the user.
+        echo "Warning: Bitbucket does not support remote file deletion via API."
+        echo "Removing '$file' locally only. Delete it manually from your repo if needed."
+        rm "$NOTES_DIR/$file"
+        echo "Deleted '$file' locally."
+        exit 0
+    fi
+
     sha_response=$(git_curl "$api_url")
     sha=""
     if [[ "$sha_response" =~ \"sha\":\ *\"([^\"]+)\" ]]; then
@@ -261,6 +303,27 @@ rename_note() {
     local sha old_api_url new_api_url sha_response content push_response delete_response http_code
     old_api_url="$GIT_API/$old_name"
     new_api_url="$GIT_API/$new_name"
+
+    if [ "$GIT_PROVIDER" = "bitbucket" ]; then
+        # Bitbucket: push new file via /src, then warn about manual cleanup of old
+        local msg="Rename $old_name to $new_name"
+        push_response=$(git_curl -w "\n%{http_code}" -X POST \
+            -F "message=$msg" \
+            -F "branch=main" \
+            -F "$new_name=@$NOTES_DIR/$old_name" \
+            "${GIT_API}/src")
+        http_code=$(echo "$push_response" | tail -n 1)
+        if [ "$http_code" != "200" ] && [ "$http_code" != "201" ]; then
+            echo "Error: Failed to create '$new_name' on remote (HTTP $http_code). No changes made." >&2
+            exit 1
+        fi
+        mv "$NOTES_DIR/$old_name" "$NOTES_DIR/$new_name"
+        echo "Renamed '$old_name' to '$new_name'."
+        echo "Warning: Bitbucket does not support remote file deletion via API."
+        echo "Please delete '$old_name' manually from your Bitbucket repo."
+        exit 0
+    fi
+
     sha_response=$(git_curl "$old_api_url")
     sha=""
     if [[ "$sha_response" =~ \"sha\":\ *\"([^\"]+)\" ]]; then
