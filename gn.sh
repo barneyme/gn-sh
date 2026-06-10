@@ -62,9 +62,6 @@ if [ -z "$GIT_API" ]; then
         codeberg)
             GIT_API="https://codeberg.org/api/v1/repos/${GIT_OWNER}/${GIT_REPO}/contents"
             ;;
-        bitbucket)
-            GIT_API="https://api.bitbucket.org/2.0/repositories/${GIT_OWNER}/${GIT_REPO}"
-            ;;
         *)
             GIT_API="https://api.github.com/repos/${GIT_OWNER}/${GIT_REPO}/contents"
             ;;
@@ -105,16 +102,10 @@ git_curl() {
     chmod 600 "$hdr"
     if [ "$GIT_PROVIDER" = "gitlab" ]; then
         echo "PRIVATE-TOKEN: $GIT_TOKEN" > "$hdr"
-        curl -s -H "@$hdr" "$@"
-    elif [ "$GIT_PROVIDER" = "bitbucket" ]; then
-        local auth_base64
-        auth_base64=$(echo -n "$GIT_OWNER:$GIT_TOKEN" | base64)
-        echo "Authorization: Basic $auth_base64" > "$hdr"
-        curl -s -H "@$hdr" "$@"
     else
         echo "Authorization: token $GIT_TOKEN" > "$hdr"
-        curl -s -H "@$hdr" "$@"
     fi
+    curl -s -H "@$hdr" "$@"
     rc=$?
     rm -f "$hdr"
     return $rc
@@ -124,9 +115,7 @@ pull_from_cloud() {
     local file="$1"
     local response content http_code url_target
 
-    if [ "$GIT_PROVIDER" = "bitbucket" ]; then
-        url_target="${GIT_API}/src/main/$file"
-    elif [ "$GIT_PROVIDER" = "gitlab" ]; then
+    if [ "$GIT_PROVIDER" = "gitlab" ]; then
         local url_enc_file=$(echo "$file" | sed 's/\//%2F/g')
         url_target="${GIT_API}/${url_enc_file}?ref=main"
     else
@@ -146,11 +135,6 @@ pull_from_cloud() {
         exit 1
     fi
 
-    if [ "$GIT_PROVIDER" = "bitbucket" ]; then
-        printf '%s' "$response" > "$file"
-        return 0
-    fi
-
     content=$(echo "$response" | grep '"content"' | head -n 1 | sed 's/.*"content": *"\(.*\)".*/\1/' | tr -d '\\n[:space:]"')
     content=$(echo "$content" | sed 's/\\n//g')
 
@@ -166,22 +150,6 @@ push_to_cloud() {
     local sha content msg url_target sha_response push_response http_code req_method payload
     content=$(base64 -w0 < "$file" 2>/dev/null || base64 < "$file" | tr -d '\n')
     msg="Note update: $file on $(date '+%Y-%m-%d %H:%M:%S')"
-
-    if [ "$GIT_PROVIDER" = "bitbucket" ]; then
-        url_target="${GIT_API}/src"
-        push_response=$(git_curl -w "\n%{http_code}" -X POST \
-            -F "message=$msg" \
-            -F "branch=main" \
-            -F "/$file=@$file" \
-            "$url_target")
-        http_code=$(echo "$push_response" | tail -n 1)
-
-        if [ "$http_code" != "201" ] && [ "$http_code" != "200" ]; then
-            echo "Error: Push operation failed upstream (HTTP $http_code)." >&2
-            exit 1
-        fi
-        return 0
-    fi
 
     if [ "$GIT_PROVIDER" = "gitlab" ]; then
         local url_enc_file=$(echo "$file" | sed 's/\//%2F/g')
@@ -245,21 +213,10 @@ delete_note() {
     read -r -p "Delete '$file'? This cannot be undone. [y/N] " confirm
     [[ "$confirm" =~ ^[Yy]$ ]] || { echo "Aborted."; exit 0; }
 
-    local sha msg url_target delete_response http_code push_response
+    local sha msg url_target delete_response http_code
     msg="Note deletion: $file on $(date '+%Y-%m-%d %H:%M:%S')"
 
-    if [ "$GIT_PROVIDER" = "bitbucket" ]; then
-        url_target="${GIT_API}/src"
-        push_response=$(git_curl -w "\n%{http_code}" -X POST \
-            -F "files=/$file" \
-            -F "message=$msg" \
-            -F "branch=main" \
-            "$url_target")
-        http_code=$(echo "$push_response" | tail -n 1)
-        if [[ "$http_code" != "200" && "$http_code" != "201" ]]; then
-            echo "Warning: Local file removed, but remote deletion failed on Bitbucket (HTTP $http_code)." >&2
-        fi
-    elif [ "$GIT_PROVIDER" = "gitlab" ]; then
+    if [ "$GIT_PROVIDER" = "gitlab" ]; then
         local url_enc_file=$(echo "$file" | sed 's/\//%2F/g')
         url_target="${GIT_API}/${url_enc_file}"
         payload="{\"branch\": \"main\", \"commit_message\": \"$msg\"}"
@@ -306,25 +263,14 @@ rename_note() {
         exit 1
     fi
 
-    local sha msg url_target delete_response http_code push_response payload
+    local sha msg url_target delete_response http_code payload
     msg="Note migration: Rename $old_name to $new_name"
 
     echo "Renaming tracking asset matches upstream..."
     cp "$old_name" "$new_name"
     push_to_cloud "$new_name"
 
-    if [ "$GIT_PROVIDER" = "bitbucket" ]; then
-        url_target="${GIT_API}/src"
-        push_response=$(git_curl -w "\n%{http_code}" -X POST \
-            -F "files=/$old_name" \
-            -F "message=$msg" \
-            -F "branch=main" \
-            "$url_target")
-        http_code=$(echo "$push_response" | tail -n 1)
-        if [[ "$http_code" != "200" && "$http_code" != "201" ]]; then
-            echo "Warning: Remote source cleanup rejected by Bitbucket API." >&2
-        fi
-    elif [ "$GIT_PROVIDER" = "gitlab" ]; then
+    if [ "$GIT_PROVIDER" = "gitlab" ]; then
         local url_enc_file=$(echo "$old_name" | sed 's/\//%2F/g')
         url_target="${GIT_API}/${url_enc_file}"
         payload="{\"branch\": \"main\", \"commit_message\": \"$msg\"}"

@@ -504,7 +504,7 @@
                         <p>
                             <code>gn</code> (Get Notes) is a zero-dependency CLI
                             note utility that saves your markdown files directly
-                            to a private GitHub, GitLab, Codeberg, or Bitbucket
+                            to a private GitHub, GitLab, or Codeberg
                             repository. It acts as a lightweight sync layer
                             using nothing but native Bash and curl - no local
                             Git installation or setup required.
@@ -668,9 +668,8 @@
                         <div class="step-content">
                             <p>
                                 Create an account with <strong>GitHub</strong>,
-                                <strong>GitLab</strong>,
-                                <strong>Codeberg</strong>, or
-                                <strong>Bitbucket</strong> if you do not already
+                                <strong>GitLab</strong>, or
+                                <strong>Codeberg</strong> if you do not already
                                 have one.
                             </p>
                         </div>
@@ -751,36 +750,6 @@
                         </div>
                     </div>
 
-                    <div class="step-item">
-                        <span class="step-num">D</span>
-                        <span class="step-title">Bitbucket Configuration</span>
-                        <div class="step-content">
-                            <p>
-                                Create a private repository named
-                                <code>gn</code>. Bitbucket uses
-                                <strong>App Passwords</strong> rather than
-                                personal access tokens - generate one under your
-                                account settings with
-                                <strong>Repositories: Read</strong> and
-                                <strong>Write</strong> permissions checked. Use
-                                your Bitbucket username as
-                                <code>GIT_OWNER</code> and the App Password as
-                                <code>GIT_TOKEN</code>.
-                            </p>
-                            <div class="external-links">
-                                <a
-                                    href="https://support.atlassian.com/bitbucket-cloud/docs/app-passwords/"
-                                    target="_blank"
-                                    >🔗 Bitbucket App Passwords Docs</a
-                                >
-                                <a
-                                    href="https://bitbucket.org/account/settings/app-passwords/new"
-                                    target="_blank"
-                                    >🔑 Direct App Password Creation Link</a
-                                >
-                            </div>
-                        </div>
-                    </div>
                 </div>
             </section>
 
@@ -909,14 +878,12 @@ GIT_REPO=gn</code></pre>
                                     <strong>GIT_PROVIDER</strong> - Your target
                                     hosting provider platform
                                     (<code>github</code>, <code>gitlab</code>,
-                                    <code>codeberg</code>, or
-                                    <code>bitbucket</code>).
+                                    or <code>codeberg</code>).
                                 </li>
                                 <li>
                                     <strong>GIT_TOKEN</strong> - Your personal
                                     access token with repository write
-                                    permissions. For Bitbucket, use an
-                                    <strong>App Password</strong> instead.
+                                    permissions.
                                 </li>
                                 <li>
                                     <strong>GIT_OWNER</strong> - Your user
