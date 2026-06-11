@@ -510,9 +510,9 @@
                             or setup required.
                         </p>
                         <p>
-                            When you run <code>gn</code> [note-name], it
-                            instantly pulls the latest file version from your
-                            Git host via HTTP API, opens it in your default
+                            When you run <code>gn</code> [note], it instantly
+                            pulls the latest file version from your Git host via
+                            HTTP API, opens it in your default
                             <code>$EDITOR</code>, and automatically pushes your
                             changes back immediately as soon as you save and
                             exit.
@@ -626,7 +626,7 @@
                                     and on cloud remote repository<br />
                                     Examples:<br />
                                     &nbsp;&nbsp;gn&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Opens
-                                    index.md<br />
+                                    note.md<br />
                                     &nbsp;&nbsp;gn
                                     log&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Creates
                                     log.md<br />
@@ -794,6 +794,35 @@
                             ./install.sh</code
                         >
                     </div>
+                    <button
+                        class="btn btn-secondary copy-btn"
+                        style="
+                            margin-top: 0.75rem;
+                            font-size: 0.85rem;
+                            padding: 0.5rem 1rem;
+                        "
+                        onclick="
+                            copyText(
+                                'curl -fsSL https://gn-notes.pages.dev/install.sh -o install.sh && chmod +x install.sh && ./install.sh',
+                                this,
+                            )
+                        "
+                    >
+                        <svg
+                            width="14"
+                            height="14"
+                            viewBox="0 0 16 16"
+                            fill="currentColor"
+                        >
+                            <path
+                                d="M0 6.75C0 5.784.784 5 1.75 5h1.5a.75.75 0 0 1 0 1.5h-1.5a.25.25 0 0 0-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 0 0 .25-.25v-1.5a.75.75 0 0 1 1.5 0v1.5A1.75 1.75 0 0 1 9.25 16h-7.5A1.75 1.75 0 0 1 0 14.25Z"
+                            />
+                            <path
+                                d="M5 1.75C5 .784 5.784 0 6.75 0h7.5C15.216 0 16 .784 16 1.75v7.5A1.75 1.75 0 0 1 14.25 11h-7.5A1.75 1.75 0 0 1 5 9.25Zm1.75-.25a.25.25 0 0 0-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 0 0 .25-.25v-7.5a.25.25 0 0 0-.25-.25Z"
+                            />
+                        </svg>
+                        Copy
+                    </button>
                     <p
                         style="
                             font-size: 0.8rem;
@@ -854,6 +883,30 @@
                 <pre
                     class="scrollable-code"
                 ><code id="script-content"># Script content dynamic loading zone...</code></pre>
+                <button
+                    class="btn btn-secondary copy-btn"
+                    style="
+                        margin-top: 0.75rem;
+                        font-size: 0.85rem;
+                        padding: 0.5rem 1rem;
+                    "
+                    onclick="copyScriptContent(this)"
+                >
+                    <svg
+                        width="14"
+                        height="14"
+                        viewBox="0 0 16 16"
+                        fill="currentColor"
+                    >
+                        <path
+                            d="M0 6.75C0 5.784.784 5 1.75 5h1.5a.75.75 0 0 1 0 1.5h-1.5a.25.25 0 0 0-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 0 0 .25-.25v-1.5a.75.75 0 0 1 1.5 0v1.5A1.75 1.75 0 0 1 9.25 16h-7.5A1.75 1.75 0 0 1 0 14.25Z"
+                        />
+                        <path
+                            d="M5 1.75C5 .784 5.784 0 6.75 0h7.5C15.216 0 16 .784 16 1.75v7.5A1.75 1.75 0 0 1 14.25 11h-7.5A1.75 1.75 0 0 1 5 9.25Zm1.75-.25a.25.25 0 0 0-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 0 0 .25-.25v-7.5a.25.25 0 0 0-.25-.25Z"
+                        />
+                    </svg>
+                    Copy Script
+                </button>
             </section>
 
             <section id="setup">
@@ -873,9 +926,36 @@
                                 Create the configuration folder hierarchy, then
                                 build the target configuration file:
                             </p>
-                            <pre><code>mkdir -p ~/gn
-nano ~/gn/gn.conf
-chmod 600 ~/gn/gn.conf</code></pre>
+                            <pre><code>mkdir -p ~/gn && nano ~/gn/gn.conf && chmod 600 ~/gn/gn.conf</code></pre>
+                            <button
+                                class="btn btn-secondary copy-btn"
+                                style="
+                                    margin-bottom: 0.75rem;
+                                    font-size: 0.85rem;
+                                    padding: 0.5rem 1rem;
+                                "
+                                onclick="
+                                    copyText(
+                                        'mkdir -p ~/gn && nano ~/gn/gn.conf && chmod 600 ~/gn/gn.conf',
+                                        this,
+                                    )
+                                "
+                            >
+                                <svg
+                                    width="14"
+                                    height="14"
+                                    viewBox="0 0 16 16"
+                                    fill="currentColor"
+                                >
+                                    <path
+                                        d="M0 6.75C0 5.784.784 5 1.75 5h1.5a.75.75 0 0 1 0 1.5h-1.5a.25.25 0 0 0-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 0 0 .25-.25v-1.5a.75.75 0 0 1 1.5 0v1.5A1.75 1.75 0 0 1 9.25 16h-7.5A1.75 1.75 0 0 1 0 14.25Z"
+                                    />
+                                    <path
+                                        d="M5 1.75C5 .784 5.784 0 6.75 0h7.5C15.216 0 16 .784 16 1.75v7.5A1.75 1.75 0 0 1 14.25 11h-7.5A1.75 1.75 0 0 1 5 9.25Zm1.75-.25a.25.25 0 0 0-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 0 0 .25-.25v-7.5a.25.25 0 0 0-.25-.25Z"
+                                    />
+                                </svg>
+                                Copy
+                            </button>
                             <p>
                                 Add these four values, adjusting for your chosen
                                 Git platform:
@@ -927,8 +1007,36 @@ GIT_REPO=gn</code></pre>
                                 executable and copy it into your system's
                                 binaries directory:
                             </p>
-                            <pre><code>chmod +x gn.sh
-sudo cp gn.sh /usr/local/bin/gn</code></pre>
+                            <pre><code>chmod +x gn.sh && sudo cp gn.sh /usr/local/bin/gn</code></pre>
+                            <button
+                                class="btn btn-secondary copy-btn"
+                                style="
+                                    margin-top: 0.5rem;
+                                    font-size: 0.85rem;
+                                    padding: 0.5rem 1rem;
+                                "
+                                onclick="
+                                    copyText(
+                                        'chmod +x gn.sh && sudo cp gn.sh /usr/local/bin/gn',
+                                        this,
+                                    )
+                                "
+                            >
+                                <svg
+                                    width="14"
+                                    height="14"
+                                    viewBox="0 0 16 16"
+                                    fill="currentColor"
+                                >
+                                    <path
+                                        d="M0 6.75C0 5.784.784 5 1.75 5h1.5a.75.75 0 0 1 0 1.5h-1.5a.25.25 0 0 0-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 0 0 .25-.25v-1.5a.75.75 0 0 1 1.5 0v1.5A1.75 1.75 0 0 1 9.25 16h-7.5A1.75 1.75 0 0 1 0 14.25Z"
+                                    />
+                                    <path
+                                        d="M5 1.75C5 .784 5.784 0 6.75 0h7.5C15.216 0 16 .784 16 1.75v7.5A1.75 1.75 0 0 1 14.25 11h-7.5A1.75 1.75 0 0 1 5 9.25Zm1.75-.25a.25.25 0 0 0-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 0 0 .25-.25v-7.5a.25.25 0 0 0-.25-.25Z"
+                                    />
+                                </svg>
+                                Copy
+                            </button>
                         </div>
                     </div>
 
@@ -940,7 +1048,7 @@ sudo cp gn.sh /usr/local/bin/gn</code></pre>
                             features.
                         </p>
                         <div class="step-content">
-                            <pre><code>gn                  # Opens your main index.md
+                            <pre><code>gn                  # Opens your main note.md
 gn daily-log        # Creates/Opens daily-log.md
 gn work/reminders   # Creates work/ directory and opens reminders.md
 gn -h               # Displays help page
@@ -988,8 +1096,36 @@ GIT_REPO=gn</code></pre>
                                 Download <code>gn.sh</code> and configure
                                 permissions globally:
                             </p>
-                            <pre><code>chmod +x gn.sh
-sudo cp gn.sh /usr/local/bin/gn</code></pre>
+                            <pre><code>chmod +x gn.sh && sudo cp gn.sh /usr/local/bin/gn</code></pre>
+                            <button
+                                class="btn btn-secondary copy-btn"
+                                style="
+                                    margin-top: 0.5rem;
+                                    font-size: 0.85rem;
+                                    padding: 0.5rem 1rem;
+                                "
+                                onclick="
+                                    copyText(
+                                        'chmod +x gn.sh && sudo cp gn.sh /usr/local/bin/gn',
+                                        this,
+                                    )
+                                "
+                            >
+                                <svg
+                                    width="14"
+                                    height="14"
+                                    viewBox="0 0 16 16"
+                                    fill="currentColor"
+                                >
+                                    <path
+                                        d="M0 6.75C0 5.784.784 5 1.75 5h1.5a.75.75 0 0 1 0 1.5h-1.5a.25.25 0 0 0-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 0 0 .25-.25v-1.5a.75.75 0 0 1 1.5 0v1.5A1.75 1.75 0 0 1 9.25 16h-7.5A1.75 1.75 0 0 1 0 14.25Z"
+                                    />
+                                    <path
+                                        d="M5 1.75C5 .784 5.784 0 6.75 0h7.5C15.216 0 16 .784 16 1.75v7.5A1.75 1.75 0 0 1 14.25 11h-7.5A1.75 1.75 0 0 1 5 9.25Zm1.75-.25a.25.25 0 0 0-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 0 0 .25-.25v-7.5a.25.25 0 0 0-.25-.25Z"
+                                    />
+                                </svg>
+                                Copy
+                            </button>
                             <p>
                                 That's it - run <code>gn</code> and it will pull
                                 your notes before opening the editor.
@@ -1137,6 +1273,23 @@ sudo cp gn.sh /usr/local/bin/gn</code></pre>
 
                 runTerminalSequence();
             });
+
+            function copyText(text, btn) {
+                navigator.clipboard.writeText(text).then(() => {
+                    const orig = btn.innerHTML;
+                    btn.innerHTML =
+                        '<svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M13.78 4.22a.75.75 0 0 1 0 1.06l-7.25 7.25a.75.75 0 0 1-1.06 0L2.22 9.28a.75.75 0 0 1 1.06-1.06L6 10.94l6.72-6.72a.75.75 0 0 1 1.06 0Z"/></svg> Copied!';
+                    setTimeout(() => {
+                        btn.innerHTML = orig;
+                    }, 2000);
+                });
+            }
+
+            function copyScriptContent(btn) {
+                const content =
+                    document.getElementById("script-content").textContent;
+                copyText(content, btn);
+            }
         </script>
     </body>
 </html>
