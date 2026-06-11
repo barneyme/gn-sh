@@ -699,9 +699,11 @@
                         <span class="step-title">GitHub Configuration</span>
                         <div class="step-content">
                             <p>
-                                Create a private repository named
-                                <code>gn</code> and generate a token with full
-                                <strong>repo</strong> permissions.
+                                Generate a token with full
+                                <strong>repo</strong> permissions. The installer
+                                can create your repository automatically, or you
+                                can create a private repository named
+                                <code>gn</code> manually.
                             </p>
                             <div class="external-links">
                                 <a
@@ -723,11 +725,13 @@
                         <span class="step-title">GitLab Configuration</span>
                         <div class="step-content">
                             <p>
-                                Create a private project named <code>gn</code>.
                                 Generate a Personal Access Token inside your
                                 user settings and ensure you check the
                                 <strong>api</strong>
-                                scope permission box.
+                                scope permission box. The installer can create
+                                your project automatically, or you can create a
+                                private project named
+                                <code>gn</code> manually.
                             </p>
                             <div class="external-links">
                                 <a
@@ -749,10 +753,12 @@
                         <span class="step-title">Codeberg Configuration</span>
                         <div class="step-content">
                             <p>
-                                Create a private repository named
-                                <code>gn</code>. Go to Settings &rarr;
-                                Applications to generate a token with repository
-                                access permissions.
+                                Go to Settings &rarr; Applications to generate a
+                                token with repository access permissions. The
+                                installer can create your repository
+                                automatically, or you can create a private
+                                repository named
+                                <code>gn</code> manually.
                             </p>
                             <div class="external-links">
                                 <a
@@ -783,8 +789,10 @@
                     <p style="font-size: 0.9rem; color: var(--text-muted)">
                         Paste this into your terminal. It downloads
                         <code>install.sh</code>, makes it executable, and runs
-                        it. You will be prompted to select your platform and
-                        credentials.
+                        it. You will be prompted to select your platform, open
+                        the token generation page, and enter your credentials.
+                        The installer will validate your token and create your
+                        repository if it doesn't exist.
                     </p>
                     <div class="run-instructions">
                         <p>Paste Into Terminal</p>
