@@ -272,6 +272,27 @@
             .setup-card li strong {
                 color: #ffffff;
             }
+            .external-links {
+                display: flex;
+                gap: 1.5rem;
+                flex-wrap: wrap;
+                margin-top: 0.75rem;
+                padding: 0.75rem 1rem;
+                background-color: #010409;
+                border: 1px dashed var(--border-color);
+                border-radius: 6px;
+            }
+            .external-links a {
+                font-size: 0.85rem;
+                display: inline-flex;
+                align-items: center;
+                gap: 0.3rem;
+                color: var(--accent-color);
+                text-decoration: none;
+            }
+            .external-links a:hover {
+                text-decoration: underline;
+            }
             .note-box {
                 margin-top: 1rem;
                 padding: 0.75rem;
@@ -382,7 +403,7 @@
                             note utility that saves your markdown files directly
                             to a GitHub repository or Dropbox. It acts as a
                             lightweight sync layer using nothing but native Bash
-                            and curl – no local Git installation or setup
+                            and curl - no local Git installation or setup
                             required. When you run gn [note], it instantly pulls
                             the latest file version from your storage host via
                             HTTP API, opens it in your default $EDITOR, and
@@ -414,7 +435,7 @@
                             <div id="scr-nano" class="terminal-screen">
                                 <div class="nano-buffer">
                                     <div class="nano-header">
-                                        GNU nano 7.2 - quicknote.md
+                                        GNU nano 7.2 - binary.md
                                     </div>
                                     <div class="nano-content">
                                         <span id="text-nano-body"></span
@@ -450,7 +471,7 @@
                             </div>
                             <div id="scr-help" class="terminal-screen">
                                 <span class="t-prompt">user@terminal:~$</span>
-                                <span class="t-cmd">gn quicknote</span><br />
+                                <span class="t-cmd">gn binary</span><br />
                                 <span class="t-out"
                                     >Fetching... [via GITHUB]</span
                                 ><br />
@@ -511,41 +532,72 @@
                 </p>
                 <div class="setup-grid">
                     <div class="setup-card">
-                        <h3>🐙 Option 1: GitHub</h3>
+                        <h3>Option 1: GitHub</h3>
                         <ul>
                             <li>
-                                <strong>Personal Access Token:</strong> Go to
+                                <strong>Github Account:</strong> If you do not
+                                already have one, create an
                                 <a
-                                    href="https://github.com/settings/tokens/new?scopes=repo&description=gn-cli"
+                                    href="https://github.com/signup"
                                     target="_blank"
                                     style="
                                         color: var(--accent-color);
                                         text-decoration: none;
                                     "
-                                    >GitHub Token Settings</a
-                                >
-                                and generate a new Personal Access Token with
-                                the
-                                <code>repo</code> scope.
+                                    >account</a
+                                >.
                             </li>
                             <li>
-                                <strong>Account &amp; Repository:</strong> Have
-                                your GitHub username ready, along with the name
-                                of the repository you want to store notes in.
-                                The setup script will offer to create a private
-                                repo for you if it doesn't already exist.
+                                <strong>Private Repository:</strong> Create a
+                                private repository (named <code>gn</code>, or
+                                anything you like) to hold your notes. The setup
+                                script will offer to create this for you
+                                automatically if it doesn't already exist.
+                            </li>
+                            <li>
+                                <strong>Personal Access Token:</strong>
+                                Generate a new Personal Access Token with full
+                                <code>repo</code> scope &mdash; this is what
+                                lets <code>gn</code> read and write files in
+                                your repository over the GitHub API.
                             </li>
                             <li>
                                 <strong>Keep it handy:</strong> The setup script
-                                will ask you to paste this token in once so it
-                                can be saved to your local config file.
+                                will ask you to paste in your token, username,
+                                and repository name once; these are saved to
+                                your local config file.
                             </li>
                         </ul>
+                        <div class="external-links">
+                            <a
+                                href="https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens"
+                                target="_blank"
+                                >🔗 GitHub PAT Token Docs</a
+                            >
+                            <a
+                                href="https://github.com/settings/tokens/new?scopes=repo&description=gn-cli"
+                                target="_blank"
+                                >🔑 Direct Token Generation Link</a
+                            >
+                        </div>
                     </div>
 
                     <div class="setup-card">
-                        <h3>📦 Option 2: Dropbox API App</h3>
+                        <h3>Option 2: Dropbox API App</h3>
                         <ul>
+                            <li>
+                                <strong>Dropbox Account:</strong> If you do not
+                                already have one, create an
+                                <a
+                                    href="https://www.dropbox.com/register"
+                                    target="_blank"
+                                    style="
+                                        color: var(--accent-color);
+                                        text-decoration: none;
+                                    "
+                                    >account</a
+                                >.
+                            </li>
                             <li>
                                 <strong>Create an App:</strong> Go to the
                                 <a
@@ -575,6 +627,18 @@
                                 connect securely.
                             </li>
                         </ul>
+                        <div class="external-links">
+                            <a
+                                href="https://developers.dropbox.com/oauth-guide"
+                                target="_blank"
+                                >🔗 Dropbox OAuth Guide</a
+                            >
+                            <a
+                                href="https://www.dropbox.com/developers/apps"
+                                target="_blank"
+                                >🔑 Dropbox App Console</a
+                            >
+                        </div>
                     </div>
                 </div>
                 <div class="note-box">
@@ -658,6 +722,18 @@ GIT_REPO=gn</code></pre>
                         Then lock the file down:
                         <code>chmod 600 ~/gn/gn.conf</code>
                     </p>
+                    <div class="external-links">
+                        <a
+                            href="https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens"
+                            target="_blank"
+                            >🔗 GitHub PAT Token Docs</a
+                        >
+                        <a
+                            href="https://github.com/settings/tokens/new?scopes=repo&description=gn-cli"
+                            target="_blank"
+                            >🔑 Direct Token Generation Link</a
+                        >
+                    </div>
                 </div>
 
                 <div class="installer-panel">
@@ -704,6 +780,18 @@ DROPBOX_PATH=/notes</code></pre>
                         Then lock the file down:
                         <code>chmod 600 ~/gn/gn.conf</code>
                     </p>
+                    <div class="external-links">
+                        <a
+                            href="https://developers.dropbox.com/oauth-guide"
+                            target="_blank"
+                            >🔗 Dropbox OAuth Guide</a
+                        >
+                        <a
+                            href="https://www.dropbox.com/developers/apps"
+                            target="_blank"
+                            >🔑 Dropbox App Console</a
+                        >
+                    </div>
                 </div>
 
                 <div class="installer-panel">
@@ -748,8 +836,9 @@ DROPBOX_PATH=/notes</code></pre>
                     })
                     .catch(() => {});
 
-                const cmd1 = "gn quicknote";
-                const nanoText = "unified engine modifications verified.";
+                const cmd1 = "gn binary";
+                const nanoText =
+                    "There are 10 types of people - those who understand binary and those who do not.";
                 const cmd2 = "gn -h";
 
                 const container1 = document.getElementById("text-cmd-1");
