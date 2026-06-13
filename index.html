@@ -401,19 +401,20 @@
                         <p>
                             <code>gn</code> (Get Notes) is a zero-dependency CLI
                             note utility that saves your markdown files directly
-                            to a GitHub repository or Dropbox. It acts as a
-                            lightweight sync layer using nothing but native Bash
-                            and curl - no local Git installation or setup
-                            required. When you run gn [note], it instantly pulls
-                            the latest file version from your storage host via
-                            HTTP API, opens it in your default $EDITOR, and
+                            to a private GitHub repository or Dropbox folder. It
+                            acts as a lightweight sync layer using nothing but
+                            native Bash and curl - no local Git installation or
+                            setup required. When you run gn [note], it pulls the
+                            latest file version from your storage host via HTTP
+                            API, opens it in your default $EDITOR, and
                             automatically pushes your changes back immediately
-                            as soon as you save and exit. It runs completely in
-                            the foreground with zero background daemons, no
-                            local databases, and no tracking. It is built to
-                            give you seamless cloud backups while keeping your
-                            notes as raw, standalone text files under your own
-                            control.
+                            as soon as you save and exit. <code>gn</code> runs
+                            anywhere Bash does - including Linux, MacOS, WSL and
+                            BSD. It runs completely in the foreground with zero
+                            background daemons, no local databases, and no
+                            tracking. It is built to give you seamless cloud
+                            backups while keeping your notes as raw, standalone
+                            text files under your own control.
                         </p>
                     </div>
 
@@ -527,8 +528,8 @@
                         margin-bottom: 1rem;
                     "
                 >
-                    Before you run the installation script below, please prepare
-                    your storage account using one of the two options:
+                    Before you run the install script below, prepare your
+                    storage account using one of the two options:
                 </p>
                 <div class="setup-grid">
                     <div class="setup-card">
@@ -550,16 +551,16 @@
                             <li>
                                 <strong>Private Repository:</strong> Create a
                                 private repository (named <code>gn</code>, or
-                                anything you like) to hold your notes. The setup
-                                script will offer to create this for you
-                                automatically if it doesn't already exist.
+                                anything you like) to hold your notes. (The
+                                setup script will offer to create this for you
+                                automatically if it doesn't already exist.)
                             </li>
                             <li>
                                 <strong>Personal Access Token:</strong>
                                 Generate a new Personal Access Token with full
-                                <code>repo</code> scope &mdash; this is what
-                                lets <code>gn</code> read and write files in
-                                your repository over the GitHub API.
+                                <code>repo</code> scope - this is what lets
+                                <code>gn</code> read and write files in your
+                                repository over the GitHub API.
                             </li>
                             <li>
                                 <strong>Keep it handy:</strong> The setup script
@@ -609,22 +610,22 @@
                                     "
                                     >Dropbox Developer Console</a
                                 >
-                                and click **Create App**. Select **Scoped
-                                access** and choose the **App folder** option.
+                                and click *Create App*. Select *Scoped access*
+                                and choose the *App folder* option.
                             </li>
                             <li>
                                 <strong>Set Permissions:</strong> Before
-                                finishing, click on the **Permissions** tab of
+                                finishing, click on the *Permissions* tab of
                                 your new app. Check the boxes for
                                 <code>files.content.write</code> and
                                 <code>files.content.read</code>, then click
-                                **Submit** at the bottom.
+                                *Submit* at the bottom.
                             </li>
                             <li>
-                                <strong>Keys:</strong> Keep your app's **App
-                                key** and **App secret** open from your settings
-                                tab. The setup script will ask for them to
-                                connect securely.
+                                <strong>Keys:</strong> Keep your app's *App key*
+                                and *App secret* open from your settings tab.
+                                The setup script will ask for them to connect
+                                securely.
                             </li>
                         </ul>
                         <div class="external-links">
@@ -643,9 +644,9 @@
                 </div>
                 <div class="note-box">
                     <strong>🔒 Privacy Note:</strong> Your credentials are kept
-                    completely private. The installer saves your choices into a
+                    private. The installer saves your choices into a
                     configuration file and locks it down so that only your local
-                    computer user profile can read it.
+                    computer user account can read it.
                 </div>
             </section>
 
@@ -681,7 +682,7 @@
                         margin-bottom: 1rem;
                     "
                 >
-                    Prefer to wire things up yourself instead of running the
+                    Prefer to do things yourself instead of running the
                     installer? Here's the whole process by hand.
                 </p>
 
@@ -719,7 +720,7 @@ GIT_TOKEN=ghp_your_personal_access_token
 GIT_OWNER=your-github-username
 GIT_REPO=gn</code></pre>
                     <p style="margin-top: 0.75rem">
-                        Then lock the file down:
+                        Then protect the file:
                         <code>chmod 600 ~/gn/gn.conf</code>
                     </p>
                     <div class="external-links">
@@ -797,7 +798,7 @@ DROPBOX_PATH=/notes</code></pre>
                 <div class="installer-panel">
                     <h3>3. Start taking notes</h3>
                     <p>
-                        Run <code>gn</code> to open today's default note, or
+                        Run <code>gn</code> to open the default note, or
                         <code>gn myfile</code> to open or create
                         <code>myfile.md</code>. gn automatically pulls the
                         latest version before editing and pushes your changes
