@@ -1,123 +1,68 @@
-# gn
+# gn Installation & Usage Guide
 
-**get_notes.md**
+`gn` (Get Notes) is a zero-dependency CLI note utility that saves markdown files directly to a private GitHub repository or a Dropbox app folder using native Bash and `curl`.
 
-`gn` (Get Notes) is a zero-dependency CLI note utility that saves your markdown files directly to a private GitHub, GitLab or Codeberg repository. It acts as a lightweight sync layer using nothing but native Bash and curl - no local Git installation or setup required.
+## Prerequisites
 
-When you run `gn note-name`, it pulls the latest file version from your Git host via HTTP API, opens it in your default `$EDITOR`, and automatically pushes your changes back when you save and exit.
+Before installing, set up credentials for **one** of the two supported backends:
 
-It runs completely in the foreground with zero background daemons, no local databases, and no tracking.
-
----
-
-## Prerequisites & Provider Configuration
-
-`gn` requires a private remote repository and a personal access token generated from your chosen host provider.
-
-### 0. Git Cloud Workspace Account
-
-Create an account with GitHub, GitLab, or Codeberg.
-
-### A. GitHub Configuration
-
-Create a private repository named `gn` and generate a token with full `repo` permissions.
-
-- GitHub PAT Token Docs
-- Direct Token Generation Link
-
-### B. GitLab Configuration
-
-Create a private project named `gn` and generate a Personal Access Token with the `api` scope.
-
-### C. Codeberg Configuration
-
-Create a private repository named `gn` and generate a token with repository access permissions.
+* **GitHub**: A private repository named `gn` (the installer can create this for you), plus a Personal Access Token with full `repo` permissions.
+* **Dropbox**: A scoped, app-folder Dropbox app with the `files.content.write` and `files.content.read` permissions, plus its App key, App secret, and a refresh token.
 
 ---
 
-## Download gn
+## Step-by-Step Installation
 
-### Option A: One-liner (Recommended)
+### Step 1: Create the Configuration File
+Run the following commands to create the secure configuration directory and file:
 
-```bash
+mkdir -p ~/gn
+nano ~/gn/gn.conf
+chmod 600 ~/gn/gn.conf
+
+Paste **one** of the following blocks into `gn.conf`, substituting your actual details, then save and exit. `gn` automatically detects which backend to use based on which variables are filled in.
+
+**GitHub backend:**
+
+GIT_TOKEN=your_personal_access_token_here
+GIT_OWNER=your_username
+GIT_REPO=gn
+
+**Dropbox backend:**
+
+DROPBOX_APP_KEY=your_app_key
+DROPBOX_APP_SECRET=your_app_secret
+DROPBOX_REFRESH_TOKEN=your_refresh_token
+DROPBOX_PATH=/notes
+
+### Step 2: Download and Install the Script
+
+#### Option A: Automated One-liner (Recommended)
+This script walks you through choosing GitHub or Dropbox, writes `gn.conf` for you, and downloads, permissions, and installs `gn` automatically:
+
 curl -fsSL https://gn-notes.pages.dev/install.sh -o install.sh && chmod +x install.sh && ./install.sh
-```
 
-### Option B: Manual Setup
+#### Option B: Manual Script Installation
+If you downloaded `gn.sh` manually, make it executable and move it to your system path:
 
-Download:
-
-- `gn.sh`
-- `gn.conf`
-
----
-
-## Manual Installation
-
-### 1. Create the Config File
-
-```bash
-mkdir -p ~/gn
-nano ~/gn/gn.conf
-chmod 600 ~/gn/gn.conf
-```
-
-```bash
-GIT_PROVIDER=github
-GIT_TOKEN=your_personal_access_token_here
-GIT_OWNER=your_username
-GIT_REPO=gn
-```
-
-### 2. Make the Script Available Globally
-
-```bash
 chmod +x gn.sh
 sudo cp gn.sh /usr/local/bin/gn
-```
-
-### 3. Using gn
-
-```bash
-gn                  # Opens your main index.md
-gn daily-log        # Creates/Opens daily-log.md
-gn work/reminders   # Creates work/ directory and opens reminders.md
-gn -h               # Displays help page
-gn -l               # Lists all your notes
-gn -g "todo"        # Finds text matching "todo" inside any note
-gn -t               # Opens today's automated scratchpad entry
-gn -d daily-log     # Deletes daily-log.md locally and from cloud remote
-gn -r old new       # Renames old.md to new.md locally and on cloud remote
-```
 
 ---
 
-## Setting Up a Second Computer
+## Help & Usage Guide
 
-### 1. Create the notes directory and config file
+Once installed, use the following commands to manage your notes. Every command automatically syncs with your configured cloud remote (GitHub or Dropbox).
 
-```bash
-mkdir -p ~/gn
-nano ~/gn/gn.conf
-chmod 600 ~/gn/gn.conf
-```
+### Basic Usage
+* `gn` — Opens your default `note.md` file.
+* `gn daily-log` — Creates or opens `daily-log.md`.
+* `gn work/reminders` — Creates a `work/` directory (if missing) and opens `reminders.md`.
+* `gn -t` — Opens today's automated scratchpad entry (`YYYY-MM-DD.md`).
 
-```bash
-GIT_PROVIDER=github
-GIT_TOKEN=your_personal_access_token_here
-GIT_OWNER=your_username
-GIT_REPO=gn
-```
-
-### 2. Install gn
-
-```bash
-chmod +x gn.sh
-sudo cp gn.sh /usr/local/bin/gn
-```
-
-That's it. Run `gn` and it will pull your notes before opening the editor.
-
----
-
-© 2026 Barney Matthews. Released under the MIT License.
+### Management & Search Commands
+* `gn -h` — Displays the help page.
+* `gn -l` — Lists all of your existing notes.
+* `gn -g "todo"` — Finds and lists text matching "todo" inside any note.
+* `gn -r old new` — Renames `old.md` to `new.md` both locally and on your cloud remote.
+* `gn -d daily-log` — Deletes `daily-log.md` both locally and from your cloud remote.
