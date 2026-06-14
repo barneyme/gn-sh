@@ -26,11 +26,8 @@ Just:
   - Dropbox
 - Automatic pull → edit → push workflow
 - Daily notes support
-- Search notes with grep
-- List notes
 - Rename notes
 - Delete notes
-- Backup notes
 - Sync all remote notes locally
 
 ---
